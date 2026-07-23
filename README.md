@@ -19,7 +19,7 @@ Everything (download + cutting) runs **on your machine** via bundled `yt-dlp` an
 - ▶️ **Preview** — watch the exact clip range inline (embedded player) before you cut.
 - 🖼️ **Frames** — color borders (black / white / blue / yellow) **or upload your own PNG** overlay.
 - 🔑 **Your key, stored locally** — bring your own free Gemini API key.
-- 🖥️ **macOS + Windows** — one codebase, native installers.
+- 🖥️ **macOS + Windows + Linux** — one codebase, native installers (Fedora `.rpm`, `.deb`, `.AppImage`).
 
 ---
 
@@ -45,8 +45,42 @@ curl.exe -L -o YTClipper-setup.exe `
 .\YTClipper-setup.exe
 ```
 
-> Exact asset filenames are listed on each release. macOS builds are unsigned —
-> right-click → **Open** the first time (or `xattr -dr com.apple.quarantine YTClipper.app`).
+**Linux — Fedora / RHEL (`.rpm`):**
+```bash
+VERSION=0.1.0
+curl -L -o yt-clipper.rpm \
+  "https://github.com/zameel7/yt-clipper/releases/download/v${VERSION}/yt-clipper-${VERSION}-1.x86_64.rpm"
+sudo dnf install ./yt-clipper.rpm
+```
+
+**Linux — universal (`.AppImage`):**
+```bash
+VERSION=0.1.0
+curl -L -o yt-clipper.AppImage \
+  "https://github.com/zameel7/yt-clipper/releases/download/v${VERSION}/yt-clipper_${VERSION}_amd64.AppImage"
+chmod +x yt-clipper.AppImage && ./yt-clipper.AppImage
+```
+
+**Linux — Debian / Ubuntu (`.deb`):**
+```bash
+VERSION=0.1.0
+curl -L -o yt-clipper.deb \
+  "https://github.com/zameel7/yt-clipper/releases/download/v${VERSION}/yt-clipper_${VERSION}_amd64.deb"
+sudo apt install ./yt-clipper.deb
+```
+
+> Exact asset filenames are listed on each release.
+
+### ⚠️ macOS: "yt-clipper is damaged and can't be opened"
+
+Not damaged — the app is **unsigned** (no paid Apple Developer cert), so macOS
+quarantines it. Clear the flag once:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/yt-clipper.app
+```
+
+Then open it normally. (Adjust the path if the app is elsewhere, e.g. `~/Downloads/`.)
 
 ---
 
@@ -87,7 +121,7 @@ cd yt-clipper
 npm install
 
 # Download the sidecar binaries for your OS (not committed to git):
-bash scripts/fetch-binaries.sh          # macOS
+bash scripts/fetch-binaries.sh          # macOS or Linux
 # pwsh scripts/fetch-binaries.ps1        # Windows
 
 npm run tauri dev      # run

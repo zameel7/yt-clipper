@@ -1,6 +1,7 @@
 name: Release
 
-# Build installers for macOS + Windows and publish them to a GitHub Release.
+# Build installers for macOS + Windows + Linux (.deb / .rpm / .AppImage) and
+# publish them to a GitHub Release.
 # Trigger by pushing a tag like v0.1.0, or run manually from the Actions tab.
 on:
   push:
@@ -22,6 +23,9 @@ jobs:
           - platform: windows-latest
             triple: x86_64-pc-windows-msvc
             args: ""
+          - platform: ubuntu-22.04 # builds .deb, .rpm (Fedora) and .AppImage
+            triple: x86_64-unknown-linux-gnu
+            args: ""
     runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
@@ -41,8 +45,22 @@ jobs:
         with:
           workspaces: "./src-tauri -> target"
 
-      - name: Fetch sidecar binaries (macOS)
-        if: runner.os == 'macOS'
+      - name: Install Linux system deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            build-essential \
+            file \
+            rpm
+
+      - name: Fetch sidecar binaries (macOS / Linux)
+        if: runner.os == 'macOS' || runner.os == 'Linux'
         run: bash scripts/fetch-binaries.sh ${{ matrix.triple }}
 
       - name: Fetch sidecar binaries (Windows)
