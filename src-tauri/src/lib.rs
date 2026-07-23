@@ -45,17 +45,16 @@ fn sidecar_path(base: &str) -> Option<String> {
     }
 }
 
-/// Extra yt-dlp args: point it at the bundled deno JS runtime (reliable YouTube
-/// extraction) and the bundled ffmpeg (for muxing merged formats).
+/// Extra yt-dlp args: point it at the bundled deno JS runtime for reliable
+/// YouTube extraction. Deliberately does NOT pass --ffmpeg-location: we download
+/// a single pre-muxed file so yt-dlp never invokes ffmpeg, and do all cutting
+/// with the bundled ffmpeg ourselves. This avoids clashing with a system ffmpeg
+/// that may sit next to the app on Linux.
 fn ytdlp_extra_args() -> Vec<String> {
     let mut v = Vec::new();
     if let Some(deno) = sidecar_path("deno") {
         v.push("--js-runtimes".into());
         v.push(format!("deno:{deno}"));
-    }
-    if let Some(ffmpeg) = sidecar_path("ffmpeg") {
-        v.push("--ffmpeg-location".into());
-        v.push(ffmpeg);
     }
     v
 }
@@ -348,10 +347,10 @@ async fn cut_clip(
 
     emit("download", "Downloading video…");
     let mut dl_args: Vec<String> = vec![
+        // Single pre-muxed file (has both audio + video) so yt-dlp never needs
+        // to merge — no ffmpeg invoked here, no clash with a system ffmpeg.
         "-f".into(),
-        "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b".into(),
-        "--merge-output-format".into(),
-        "mp4".into(),
+        "best[ext=mp4]/best".into(),
         // YouTube intermittently 403s a stream URL; retry and let yt-dlp fall
         // back to another player client instead of failing the whole cut.
         "--retries".into(),
