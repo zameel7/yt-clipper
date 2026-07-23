@@ -17,6 +17,7 @@ struct Segment {
 struct TranscriptResult {
     video_id: String,
     duration: f64,
+    language: String,
     segments: Vec<Segment>,
 }
 
@@ -147,17 +148,95 @@ fn parse_vtt(content: &str) -> Vec<Segment> {
     segments
 }
 
+/// Sorted keys of a JSON object field (e.g. "subtitles"), skipping non-caption
+/// tracks like live chat.
+fn caption_langs(info: &serde_json::Value, field: &str) -> Vec<String> {
+    info.get(field)
+        .and_then(|v| v.as_object())
+        .map(|o| {
+            o.keys()
+                .filter(|k| *k != "live_chat")
+                .cloned()
+                .collect::<Vec<_>>()
+        })
+        .unwrap_or_default()
+}
+
+/// Pick the best caption language to download for a video, preferring the
+/// original spoken language over auto-translations (which trip HTTP 429).
+/// Returns (lang_code, is_auto_generated).
+fn choose_caption_lang(info: &serde_json::Value) -> Option<(String, bool)> {
+    let orig = info.get("language").and_then(|v| v.as_str());
+    let manual = caption_langs(info, "subtitles");
+    let auto = caption_langs(info, "automatic_captions");
+
+    // 1) Manually-uploaded subs in the original language.
+    if let Some(o) = orig {
+        if manual.iter().any(|l| l == o) {
+            return Some((o.to_string(), false));
+        }
+    }
+    // 2) Any manual subs (uploader-provided, so real — not machine translation).
+    if let Some(first) = manual.first() {
+        return Some((first.clone(), false));
+    }
+    // 3) Auto-captions in the original language (a direct transcript, no 429).
+    if let Some(o) = orig {
+        if auto.iter().any(|l| l == o) {
+            return Some((o.to_string(), true));
+        }
+    }
+    // 4) Last resort: prefer English auto, else the first available.
+    if auto.iter().any(|l| l == "en") {
+        return Some(("en".to_string(), true));
+    }
+    auto.first().map(|l| (l.clone(), true))
+}
+
 #[tauri::command]
 async fn fetch_transcript(app: AppHandle, url: String) -> Result<TranscriptResult, String> {
+    // 1) Probe metadata to learn the video's language + available caption tracks.
+    let mut probe_args: Vec<String> =
+        vec!["-J".into(), "--no-playlist".into(), url.clone()];
+    probe_args.extend(ytdlp_extra_args());
+
+    let probe = app
+        .shell()
+        .sidecar("yt-dlp")
+        .map_err(|e| format!("sidecar yt-dlp: {e}"))?
+        .args(probe_args)
+        .output()
+        .await
+        .map_err(|e| format!("yt-dlp run failed: {e}"))?;
+
+    if !probe.status.success() {
+        let err = String::from_utf8_lossy(&probe.stderr);
+        return Err(format!("yt-dlp error: {}", err.trim()));
+    }
+
+    let info: serde_json::Value =
+        serde_json::from_slice(&probe.stdout).map_err(|e| format!("parse metadata: {e}"))?;
+    let video_id = info["id"].as_str().unwrap_or("").to_string();
+    let duration_meta = info["duration"].as_f64().unwrap_or(0.0);
+
+    let (lang, is_auto) = choose_caption_lang(&info).ok_or_else(|| {
+        "No captions found for this video (no subtitles or auto-captions).".to_string()
+    })?;
+
+    // 2) Download only the chosen language track (single request → no 429 storm).
     let dir = unique_tmp_dir("sub")?;
     let out_tpl = dir.join("%(id)s").to_string_lossy().to_string();
 
+    let sub_flag = if is_auto {
+        "--write-auto-subs"
+    } else {
+        "--write-subs"
+    };
     let mut args: Vec<String> = vec![
         "--skip-download".into(),
-        "--write-auto-subs".into(),
-        "--write-subs".into(),
+        sub_flag.into(),
         "--sub-langs".into(),
-        "en,en-orig,en-US,en-GB".into(),
+        lang.clone(),
         "--sub-format".into(),
         "vtt".into(),
         "--convert-subs".into(),
@@ -186,15 +265,10 @@ async fn fetch_transcript(app: AppHandle, url: String) -> Result<TranscriptResul
 
     // Find the first .vtt file written.
     let mut vtt_path: Option<PathBuf> = None;
-    let mut video_id = String::new();
     if let Ok(entries) = fs::read_dir(&dir) {
         for entry in entries.flatten() {
             let p = entry.path();
             if p.extension().and_then(|e| e.to_str()) == Some("vtt") {
-                if let Some(stem) = p.file_stem().and_then(|s| s.to_str()) {
-                    // stem is like "<id>.en"
-                    video_id = stem.split('.').next().unwrap_or("").to_string();
-                }
                 vtt_path = Some(p);
                 break;
             }
@@ -220,10 +294,15 @@ async fn fetch_transcript(app: AppHandle, url: String) -> Result<TranscriptResul
         return Err("Captions file was empty or unparseable.".to_string());
     }
 
-    let duration = segments.last().map(|s| s.end).unwrap_or(0.0);
+    let duration = if duration_meta > 0.0 {
+        duration_meta
+    } else {
+        segments.last().map(|s| s.end).unwrap_or(0.0)
+    };
     Ok(TranscriptResult {
         video_id,
         duration,
+        language: lang,
         segments,
     })
 }

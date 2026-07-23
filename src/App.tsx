@@ -10,6 +10,7 @@ import "./App.css";
 interface TranscriptResult {
   video_id: string;
   duration: number;
+  language: string;
   segments: Segment[];
 }
 
@@ -56,6 +57,7 @@ export default function App() {
   const [busy, setBusy] = useState<null | string>(null);
   const [error, setError] = useState<string | null>(null);
   const [videoId, setVideoId] = useState<string | null>(null);
+  const [lang, setLang] = useState<string | null>(null);
   const [, setSegments] = useState<Segment[]>([]);
   const [clips, setClips] = useState<Clip[]>([]);
   const [previewIdx, setPreviewIdx] = useState<number | null>(null);
@@ -125,6 +127,7 @@ export default function App() {
     setClips([]);
     setSaved({});
     setVideoId(null);
+    setLang(null);
     setPreviewIdx(null);
     if (!apiKey) {
       setShowSettings(true);
@@ -138,6 +141,7 @@ export default function App() {
       setBusy("Fetching transcript…");
       const t = await invoke<TranscriptResult>("fetch_transcript", { url: url.trim() });
       setVideoId(t.video_id);
+      setLang(t.language);
       setSegments(t.segments);
 
       setBusy("Asking Gemini for clip ideas…");
@@ -261,6 +265,7 @@ export default function App() {
           <h2>
             {clips.length} clip{clips.length > 1 ? "s" : ""} suggested
             {videoId ? ` · ${videoId}` : ""}
+            {lang ? ` · captions: ${lang}` : ""}
           </h2>
           {clips.map((c, i) => (
             <div className="clip" key={i}>

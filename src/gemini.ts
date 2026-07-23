@@ -54,11 +54,11 @@ export async function suggestClips(
   targetSeconds: number
 ): Promise<Clip[]> {
   const transcript = buildTranscript(segments);
-  const prompt = `You are a short-form video editor. Below is a timestamped transcript of a YouTube video (each line is "[start-end] text", times in seconds).
+  const prompt = `You are a short-form video editor. Below is a timestamped transcript of a YouTube video (each line is "[start-end] text", times in seconds). The transcript may be in any language.
 
 Pick the ${count} most engaging, self-contained moments that would make great short clips (each roughly ${targetSeconds} seconds long — pick natural start/end times from the transcript timestamps so a clip does not cut mid-sentence).
 
-For each clip return: start (seconds), end (seconds), a short catchy title, and a one-sentence reason it works as a short.
+For each clip return: start (seconds), end (seconds), a short catchy title, and a one-sentence reason it works as a short. Write the title and reason in English (you may keep a short key phrase in the original language if it is the hook).
 
 Transcript:
 ${transcript}`;
