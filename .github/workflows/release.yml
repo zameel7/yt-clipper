@@ -1,0 +1,65 @@
+name: Release
+
+# Build installers for macOS + Windows and publish them to a GitHub Release.
+# Trigger by pushing a tag like v0.1.0, or run manually from the Actions tab.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest # Apple Silicon runner
+            triple: aarch64-apple-darwin
+            args: "--target aarch64-apple-darwin"
+          - platform: windows-latest
+            triple: x86_64-pc-windows-msvc
+            args: ""
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.triple }}
+
+      - name: Cache cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+
+      - name: Fetch sidecar binaries (macOS)
+        if: runner.os == 'macOS'
+        run: bash scripts/fetch-binaries.sh ${{ matrix.triple }}
+
+      - name: Fetch sidecar binaries (Windows)
+        if: runner.os == 'Windows'
+        run: pwsh scripts/fetch-binaries.ps1
+
+      - name: Install frontend deps
+        run: npm ci
+
+      - name: Build and release
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "YT Clipper ${{ github.ref_name }}"
+          releaseBody: "Download the installer for your OS below."
+          releaseDraft: false
+          prerelease: false
+          args: ${{ matrix.args }}
