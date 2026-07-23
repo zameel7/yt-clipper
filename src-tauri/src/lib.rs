@@ -349,9 +349,19 @@ async fn cut_clip(
     emit("download", "Downloading video…");
     let mut dl_args: Vec<String> = vec![
         "-f".into(),
-        "best[ext=mp4]/bestvideo[ext=mp4]+bestaudio[ext=m4a]/best".into(),
+        "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b".into(),
         "--merge-output-format".into(),
         "mp4".into(),
+        // YouTube intermittently 403s a stream URL; retry and let yt-dlp fall
+        // back to another player client instead of failing the whole cut.
+        "--retries".into(),
+        "10".into(),
+        "--fragment-retries".into(),
+        "10".into(),
+        "--extractor-retries".into(),
+        "3".into(),
+        "--extractor-args".into(),
+        "youtube:player_client=default,web_safari".into(),
         "--no-playlist".into(),
         "-o".into(),
         src_str.clone(),

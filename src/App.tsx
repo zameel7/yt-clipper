@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { save, open } from "@tauri-apps/plugin-dialog";
-import { revealItemInDir } from "@tauri-apps/plugin-opener";
+import { revealItemInDir, openUrl } from "@tauri-apps/plugin-opener";
 import { load, Store } from "@tauri-apps/plugin-store";
 import { suggestClips, type Clip, type Segment } from "./gemini";
 import "./App.css";
@@ -60,7 +60,6 @@ export default function App() {
   const [lang, setLang] = useState<string | null>(null);
   const [, setSegments] = useState<Segment[]>([]);
   const [clips, setClips] = useState<Clip[]>([]);
-  const [previewIdx, setPreviewIdx] = useState<number | null>(null);
 
   const [cutting, setCutting] = useState<number | null>(null);
   const [cutMsg, setCutMsg] = useState("");
@@ -128,7 +127,6 @@ export default function App() {
     setSaved({});
     setVideoId(null);
     setLang(null);
-    setPreviewIdx(null);
     if (!apiKey) {
       setShowSettings(true);
       return;
@@ -302,9 +300,15 @@ export default function App() {
                 <div className="clip-actions">
                   <button
                     className="ghost"
-                    onClick={() => setPreviewIdx(previewIdx === i ? null : i)}
+                    disabled={!videoId}
+                    onClick={() =>
+                      videoId &&
+                      openUrl(
+                        `https://www.youtube.com/watch?v=${videoId}&t=${Math.floor(c.start)}s`
+                      )
+                    }
                   >
-                    {previewIdx === i ? "▲ Hide" : "▶ Preview"}
+                    ▶ Preview
                   </button>
                   {cutting === i ? (
                     <span className="cutting">{cutMsg || "Cutting…"}</span>
@@ -323,18 +327,6 @@ export default function App() {
                   )}
                 </div>
               </div>
-              {previewIdx === i && videoId && (
-                <div className="preview">
-                  <iframe
-                    title={`preview-${i}`}
-                    src={`https://www.youtube.com/embed/${videoId}?start=${Math.floor(
-                      c.start
-                    )}&end=${Math.ceil(c.end)}&autoplay=1&rel=0`}
-                    allow="autoplay; encrypted-media"
-                    allowFullScreen
-                  />
-                </div>
-              )}
             </div>
           ))}
         </section>
