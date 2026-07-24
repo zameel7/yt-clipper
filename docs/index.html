@@ -1,0 +1,579 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YT Clipper — Cut the best moments out of any YouTube video</title>
+  <meta name="description" content="Paste a URL, let AI mark the best moments from the transcript, fine-tune the in/out times, and export real .mp4 clips — entirely on your machine. macOS · Windows · Linux." />
+
+  <meta property="og:title" content="YT Clipper" />
+  <meta property="og:description" content="AI marks the moments, your machine does the cutting. Real .mp4 clips, no server, no account." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="icon.png" />
+
+  <link rel="icon" type="image/png" href="icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preconnect" href="https://api.github.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0b0b0f;
+      --bg-2: #101017;
+      --panel: #15151d;
+      --panel-2: #1b1b25;
+      --line: #262632;
+      --line-soft: #1e1e28;
+      --ink: #f6f5f3;
+      --muted: #9a9aa8;
+      --faint: #62626f;
+      --cut: #ff5a3c;      /* razor / accent */
+      --cut-2: #ff8a3c;
+      --amber: #ffc24d;    /* timeline selection */
+      --live: #35d07f;
+      --glow: rgba(255, 90, 60, 0.32);
+      --radius: 14px;
+      --maxw: 1140px;
+      --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --disp: "Space Grotesk", var(--sans);
+      --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+    :root[data-theme="light"] {
+      --bg: #f6f5f2;
+      --bg-2: #efede8;
+      --panel: #ffffff;
+      --panel-2: #f4f2ee;
+      --line: #e2e0d9;
+      --line-soft: #eae8e2;
+      --ink: #16151a;
+      --muted: #5a5964;
+      --faint: #8b8a93;
+      --glow: rgba(255, 90, 60, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0; font-family: var(--sans); background: var(--bg); color: var(--ink);
+      line-height: 1.6; overflow-x: hidden; -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    code, .mono { font-family: var(--mono); }
+    .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 24px; }
+    ::selection { background: var(--cut); color: #fff; }
+
+    /* ambient */
+    .bg {
+      position: fixed; inset: 0; z-index: -2; pointer-events: none;
+      background:
+        radial-gradient(720px 420px at 82% -6%, var(--glow), transparent 68%),
+        radial-gradient(560px 380px at 8% 2%, rgba(255,194,77,0.10), transparent 70%);
+    }
+
+    /* ---------- nav ---------- */
+    nav {
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: saturate(160%) blur(14px); -webkit-backdrop-filter: saturate(160%) blur(14px);
+      background: color-mix(in srgb, var(--bg) 74%, transparent);
+      border-bottom: 1px solid var(--line-soft);
+    }
+    .nav-in { display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .brand { display: flex; align-items: center; gap: 10px; font-family: var(--disp); font-weight: 700; letter-spacing: -0.02em; font-size: 1.05rem; }
+    .brand img { width: 28px; height: 28px; border-radius: 7px; }
+    .nav-links { display: flex; align-items: center; gap: 24px; }
+    .nav-links a.link { color: var(--muted); font-size: 0.9rem; font-weight: 500; transition: color .15s; }
+    .nav-links a.link:hover { color: var(--ink); }
+    .icon-btn {
+      display: inline-grid; place-items: center; width: 36px; height: 36px;
+      border: 1px solid var(--line); border-radius: 9px; background: var(--panel);
+      color: var(--muted); cursor: pointer; transition: .15s; font-size: 1rem;
+    }
+    .icon-btn:hover { color: var(--ink); border-color: var(--faint); }
+    @media (max-width: 720px) { .nav-links a.link { display: none; } }
+
+    /* ---------- buttons ---------- */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+      font-family: var(--sans); font-weight: 600; font-size: 0.96rem; padding: 12px 20px;
+      border-radius: 11px; border: 1px solid transparent; cursor: pointer;
+      transition: transform .12s, box-shadow .2s, background .2s, border-color .2s; white-space: nowrap;
+    }
+    .btn:active { transform: translateY(1px); }
+    .btn-primary { background: linear-gradient(135deg, var(--cut), var(--cut-2)); color: #fff; box-shadow: 0 10px 30px -10px var(--glow); }
+    .btn-primary:hover { box-shadow: 0 16px 40px -10px var(--glow); transform: translateY(-1px); }
+    .btn-ghost { background: var(--panel); color: var(--ink); border-color: var(--line); }
+    .btn-ghost:hover { border-color: var(--faint); }
+
+    .tc-eyebrow { font-family: var(--mono); font-size: 0.74rem; letter-spacing: 0.06em; color: var(--cut); text-transform: uppercase; }
+
+    /* ---------- hero ---------- */
+    .hero { padding: 66px 0 30px; }
+    .hero-grid { display: grid; grid-template-columns: 1.04fr 0.96fr; gap: 52px; align-items: center; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 8px; font-family: var(--mono);
+      font-size: 0.74rem; letter-spacing: 0.02em; color: var(--muted);
+      background: var(--panel); border: 1px solid var(--line); padding: 6px 12px; border-radius: 999px; margin-bottom: 24px;
+    }
+    .pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--live); box-shadow: 0 0 0 4px rgba(53,208,127,.16); animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{ box-shadow: 0 0 0 4px rgba(53,208,127,.16);} 50%{ box-shadow: 0 0 0 7px rgba(53,208,127,0);} }
+    h1 {
+      font-family: var(--disp); font-size: clamp(2.3rem, 4.6vw, 3.5rem); line-height: 1.04;
+      letter-spacing: -0.03em; margin: 0 0 20px; font-weight: 700;
+    }
+    h1 .cut-word { position: relative; white-space: nowrap; color: var(--cut); }
+    h1 .cut-word::after {
+      content: ""; position: absolute; left: 0; right: 0; bottom: 4%; height: 8px; border-radius: 4px;
+      background: color-mix(in srgb, var(--amber) 70%, transparent); z-index: -1;
+      transform: scaleX(0); transform-origin: left; animation: hl 1s .45s cubic-bezier(.7,0,.3,1) forwards;
+    }
+    @keyframes hl { to { transform: scaleX(1); } }
+    .sub { font-size: 1.12rem; color: var(--muted); max-width: 520px; margin: 0 0 30px; }
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+    .hero-note { margin-top: 16px; font-family: var(--mono); font-size: 0.78rem; color: var(--faint); }
+    @media (max-width: 900px) {
+      .hero-grid { grid-template-columns: 1fr; gap: 40px; }
+      .hero { padding: 44px 0 20px; }
+    }
+
+    /* ---------- app mockup (signature) ---------- */
+    .app {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 16px;
+      box-shadow: 0 40px 80px -40px rgba(0,0,0,.7), 0 2px 0 rgba(255,255,255,.02) inset;
+      overflow: hidden; transform: perspective(1600px) rotateY(-5deg) rotateX(2deg); transition: transform .5s;
+    }
+    .app:hover { transform: perspective(1600px) rotateY(0deg) rotateX(0deg); }
+    .app-bar { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-bottom: 1px solid var(--line-soft); background: var(--panel-2); }
+    .dots { display: flex; gap: 6px; }
+    .dots span { width: 11px; height: 11px; border-radius: 50%; background: var(--line); }
+    .dots span:nth-child(1){ background:#ff5f57;} .dots span:nth-child(2){ background:#febc2e;} .dots span:nth-child(3){ background:#28c840;}
+    .app-url {
+      flex: 1; font-family: var(--mono); font-size: 0.72rem; color: var(--muted);
+      background: var(--bg); border: 1px solid var(--line-soft); border-radius: 7px; padding: 6px 10px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .app-go { font-size: 0.72rem; font-weight: 600; color: #fff; background: linear-gradient(135deg,var(--cut),var(--cut-2)); padding: 6px 11px; border-radius: 7px; }
+    .app-body { padding: 14px; display: grid; gap: 12px; }
+
+    .stage { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--line-soft); }
+    .stage-thumb {
+      aspect-ratio: 16 / 8.4; width: 100%;
+      background:
+        radial-gradient(120% 120% at 30% 20%, #3a2140, transparent 60%),
+        linear-gradient(135deg, #221a2e, #101018 70%);
+      display: grid; place-items: center;
+    }
+    .play { width: 46px; height: 46px; border-radius: 50%; background: rgba(255,255,255,.14); backdrop-filter: blur(4px); display: grid; place-items: center; border: 1px solid rgba(255,255,255,.25); }
+    .play::after { content: ""; margin-left: 3px; border-style: solid; border-width: 8px 0 8px 13px; border-color: transparent transparent transparent #fff; }
+    .dur { position: absolute; right: 8px; bottom: 40px; font-family: var(--mono); font-size: 0.66rem; color: #fff; background: rgba(0,0,0,.6); padding: 2px 6px; border-radius: 4px; }
+    .scrub { position: absolute; left: 0; right: 0; bottom: 0; height: 32px; background: rgba(0,0,0,.55); backdrop-filter: blur(2px); }
+    .track { position: absolute; left: 14px; right: 14px; top: 50%; transform: translateY(-50%); height: 5px; border-radius: 3px; background: rgba(255,255,255,.18); }
+    .sel { position: absolute; left: 26%; width: 34%; top: 0; bottom: 0; background: var(--amber); border-radius: 3px; box-shadow: 0 0 10px rgba(255,194,77,.45); }
+    .handle { position: absolute; top: 50%; transform: translateY(-50%); width: 9px; height: 13px; border-radius: 3px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); }
+    .handle.l { left: -5px; } .handle.r { right: -5px; }
+    .playhead { position: absolute; top: -6px; bottom: -6px; width: 2px; background: var(--cut); left: 44%; box-shadow: 0 0 8px var(--cut); animation: scan 5.5s linear infinite; }
+    @keyframes scan { 0%{ left: 6%;} 100%{ left: 92%;} }
+
+    .clip {
+      display: flex; align-items: center; gap: 12px; padding: 11px 12px;
+      border: 1px solid var(--line-soft); border-radius: 10px; background: var(--bg);
+    }
+    .clip.on { border-color: var(--cut); box-shadow: 0 0 0 1px var(--cut) inset; }
+    .clip-tc { font-family: var(--mono); font-size: 0.68rem; color: var(--amber); flex-shrink: 0; }
+    .clip-main { min-width: 0; flex: 1; }
+    .clip-title { font-size: 0.84rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .clip-sub { font-family: var(--mono); font-size: 0.64rem; color: var(--faint); margin-top: 2px; }
+    .clip-cut { flex-shrink: 0; font-size: 0.72rem; font-weight: 600; color: var(--cut); border: 1px solid var(--line); border-radius: 7px; padding: 6px 12px; }
+    .clip.on .clip-cut { background: linear-gradient(135deg,var(--cut),var(--cut-2)); color: #fff; border-color: transparent; }
+
+    /* ---------- marquee strip ---------- */
+    .strip { border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); background: var(--bg-2); padding: 14px 0; margin-top: 30px; }
+    .strip-in { display: flex; gap: 34px; justify-content: center; flex-wrap: wrap; font-family: var(--mono); font-size: 0.76rem; color: var(--muted); }
+    .strip-in b { color: var(--ink); font-weight: 700; }
+    .strip .sep { color: var(--cut); }
+
+    /* ---------- section ---------- */
+    section { padding: 76px 0; }
+    .sec-head { max-width: 640px; margin: 0 0 46px; }
+    .sec-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+    .sec-head h2 { font-family: var(--disp); font-size: clamp(1.7rem, 3.4vw, 2.35rem); letter-spacing: -0.025em; margin: 12px 0 10px; font-weight: 600; }
+    .sec-head p { color: var(--muted); font-size: 1.04rem; margin: 0; }
+
+    /* ---------- how: timeline ---------- */
+    .rail { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
+    .rail::before { content: ""; position: absolute; left: 8%; right: 8%; top: 15px; height: 2px; background: linear-gradient(90deg, var(--cut), var(--amber)); opacity: .5; }
+    .node { position: relative; padding: 0 14px; }
+    .node .mk { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--panel); border: 1px solid var(--line); font-family: var(--mono); font-size: 0.72rem; color: var(--cut); position: relative; z-index: 1; }
+    .node .tc { font-family: var(--mono); font-size: 0.68rem; color: var(--faint); margin: 14px 0 4px; }
+    .node h4 { font-family: var(--disp); font-weight: 600; font-size: 1.05rem; margin: 0 0 5px; letter-spacing: -0.01em; }
+    .node p { margin: 0; color: var(--muted); font-size: 0.9rem; }
+    @media (max-width: 760px) {
+      .rail { grid-template-columns: 1fr 1fr; gap: 32px 0; }
+      .rail::before { display: none; }
+    }
+
+    /* ---------- features ---------- */
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 22px; transition: transform .18s, border-color .18s; }
+    .card:hover { transform: translateY(-3px); border-color: var(--faint); }
+    .card .ic { font-size: 1.15rem; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); margin-bottom: 15px; }
+    .card h3 { font-family: var(--disp); margin: 0 0 7px; font-size: 1.06rem; font-weight: 600; letter-spacing: -0.01em; }
+    .card p { margin: 0; color: var(--muted); font-size: 0.92rem; }
+    @media (max-width: 860px) { .features { grid-template-columns: 1fr 1fr; } }
+    @media (max-width: 540px) { .features { grid-template-columns: 1fr; } }
+
+    /* ---------- download ---------- */
+    #download { background: var(--bg-2); border-top: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+    .dl-panel { max-width: 800px; margin: 0 auto; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+    .dl-hero { padding: 30px 30px 26px; text-align: center; background: radial-gradient(420px 200px at 50% -40%, var(--glow), transparent 70%), var(--panel); border-bottom: 1px solid var(--line-soft); }
+    .dl-os { font-family: var(--mono); font-size: 0.78rem; color: var(--muted); margin-bottom: 4px; }
+    .dl-os b { color: var(--ink); }
+    .dl-primary-btn { margin: 14px auto 0; min-width: 300px; font-size: 1.04rem; padding: 15px 26px; }
+    .dl-primary-btn .sz { font-family: var(--mono); font-weight: 400; opacity: .85; font-size: 0.78rem; }
+    .dl-ver { margin-top: 12px; font-family: var(--mono); font-size: 0.74rem; color: var(--faint); }
+    .dl-ver a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
+
+    .os-tabs { display: flex; gap: 6px; justify-content: center; padding: 14px 12px 2px; flex-wrap: wrap; }
+    .os-tab { font-size: 0.86rem; font-weight: 600; color: var(--muted); padding: 7px 15px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; background: transparent; }
+    .os-tab:hover { color: var(--ink); }
+    .os-tab.active { color: var(--ink); background: var(--panel-2); border-color: var(--line); }
+
+    .dl-all { padding: 8px 8px 14px; }
+    .dl-os-title { display: flex; align-items: center; gap: 10px; padding: 14px 18px 8px; font-family: var(--disp); font-weight: 600; font-size: 0.98rem; }
+    .dl-os-title .badge { font-family: var(--mono); font-size: 0.68rem; font-weight: 400; color: var(--faint); border: 1px solid var(--line); padding: 2px 8px; border-radius: 999px; }
+    .dl-rows { display: flex; flex-direction: column; gap: 8px; padding: 2px 10px; }
+    .dl-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 15px; border: 1px solid var(--line); border-radius: 11px; background: var(--panel-2); transition: border-color .15s; }
+    .dl-row:hover { border-color: var(--faint); }
+    .dl-row.reco { border-color: var(--cut); box-shadow: 0 0 0 1px var(--cut) inset; }
+    .dl-row-l { min-width: 0; }
+    .dl-row .fmt { font-weight: 600; font-size: 0.94rem; display: flex; align-items: center; gap: 8px; }
+    .dl-row .reco-tag { font-family: var(--mono); font-size: 0.62rem; font-weight: 700; color: #fff; background: var(--cut); padding: 2px 7px; border-radius: 999px; letter-spacing: .04em; }
+    .dl-row .meta { font-family: var(--mono); font-size: 0.72rem; color: var(--faint); margin-top: 3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dl-dl { flex-shrink: 0; font-size: 0.84rem; font-weight: 600; color: var(--ink); border: 1px solid var(--line); background: var(--panel); padding: 8px 14px; border-radius: 9px; transition: .15s; }
+    .dl-dl:hover { border-color: var(--cut); color: var(--cut); }
+
+    .callout { max-width: 800px; margin: 22px auto 0; display: flex; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--amber); border-radius: 12px; padding: 14px 18px; font-size: 0.9rem; color: var(--muted); }
+    .callout code { background: var(--panel-2); padding: 2px 6px; border-radius: 5px; color: var(--ink); font-size: 0.82em; }
+
+    /* ---------- footer ---------- */
+    footer { padding: 44px 0; border-top: 1px solid var(--line-soft); color: var(--muted); font-size: 0.9rem; }
+    .foot-in { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .foot-links { display: flex; gap: 22px; flex-wrap: wrap; }
+    .foot-links a:hover { color: var(--ink); }
+    .legal { max-width: var(--maxw); margin: 18px auto 0; padding: 0 24px; font-family: var(--mono); font-size: 0.72rem; line-height: 1.7; color: var(--faint); }
+
+    .hidden { display: none !important; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::after, *::before { animation: none !important; transition: none !important; }
+      h1 .cut-word::after { transform: scaleX(1); }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg"></div>
+
+  <!-- NAV -->
+  <nav>
+    <div class="wrap nav-in">
+      <a class="brand" href="#top"><img src="icon.png" alt="YT Clipper logo" /><span>YT Clipper</span></a>
+      <div class="nav-links">
+        <a class="link" href="#how">How it works</a>
+        <a class="link" href="#features">Features</a>
+        <a class="link" href="https://github.com/zameel7/yt-clipper" target="_blank" rel="noopener">GitHub</a>
+        <button id="theme-toggle" class="icon-btn" title="Toggle theme" aria-label="Toggle theme"><span id="theme-icon">☾</span></button>
+        <a class="btn btn-primary" href="#download">Download</a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="hero" id="top">
+    <div class="wrap hero-grid">
+      <div>
+        <span class="pill"><span class="dot"></span> free · local · no account</span>
+        <h1>Find the best <span class="cut-word">40&nbsp;seconds</span> in a 40&#8209;minute video.</h1>
+        <p class="sub">
+          Paste a YouTube URL. AI reads the transcript and marks the moments worth sharing.
+          Fine-tune the in and out, preview inline, and export real <code>.mp4</code> clips —
+          every frame processed on your own machine.
+        </p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="#download" id="hero-download">↓ Download for your OS</a>
+          <a class="btn btn-ghost" href="https://github.com/zameel7/yt-clipper" target="_blank" rel="noopener">★ Star on GitHub</a>
+        </div>
+        <p class="hero-note" id="hero-note">detecting platform…</p>
+      </div>
+
+      <!-- signature: app window -->
+      <div class="app" role="img" aria-label="YT Clipper app window showing a video with a highlighted clip selection and AI-suggested clips">
+        <div class="app-bar">
+          <div class="dots"><span></span><span></span><span></span></div>
+          <div class="app-url">youtube.com/watch?v=dQw4w9WgXcQ</div>
+          <div class="app-go">Get suggestions</div>
+        </div>
+        <div class="app-body">
+          <div class="stage">
+            <div class="stage-thumb"><div class="play"></div></div>
+            <div class="dur">12:34</div>
+            <div class="scrub">
+              <div class="track">
+                <div class="sel"><span class="handle l"></span><span class="handle r"></span></div>
+                <div class="playhead"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="clip on">
+            <div class="clip-tc">00:14 → 00:52</div>
+            <div class="clip-main">
+              <div class="clip-title">The counter-intuitive part everyone skips</div>
+              <div class="clip-sub">38s · suggested by AI</div>
+            </div>
+            <div class="clip-cut">✂ Cut</div>
+          </div>
+          <div class="clip">
+            <div class="clip-tc">03:02 → 03:29</div>
+            <div class="clip-main">
+              <div class="clip-title">Live demo, no edits</div>
+              <div class="clip-sub">27s · suggested by AI</div>
+            </div>
+            <div class="clip-cut">✂ Cut</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="strip">
+      <div class="wrap strip-in">
+        <span><b>yt-dlp</b> downloads</span><span class="sep">/</span>
+        <span><b>ffmpeg</b> cuts</span><span class="sep">/</span>
+        <span><b>Gemini 2.5 Flash</b> suggests</span><span class="sep">/</span>
+        <span><b>0</b> uploads</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- HOW -->
+  <section id="how">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="tc-eyebrow">// the pipeline</div>
+        <h2>Four steps, start to saved clip</h2>
+        <p>No timeline scrubbing through an hour of footage. The transcript does the finding.</p>
+      </div>
+      <div class="rail">
+        <div class="node"><div class="mk">01</div><div class="tc">paste</div><h4>Drop a URL</h4><p>Any YouTube link. Captions get pulled as timed segments.</p></div>
+        <div class="node"><div class="mk">02</div><div class="tc">read</div><h4>AI marks moments</h4><p>Gemini scans the transcript and proposes clips with in/out times.</p></div>
+        <div class="node"><div class="mk">03</div><div class="tc">tune</div><h4>Edit &amp; preview</h4><p>Nudge start/end, watch the exact range in an inline player.</p></div>
+        <div class="node"><div class="mk">04</div><div class="tc">export</div><h4>Cut to disk</h4><p>ffmpeg writes a real .mp4 — optional frame or PNG overlay.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="tc-eyebrow">// what's in the box</div>
+        <h2>Runs entirely on your machine</h2>
+        <p>No server, no upload, no account. Bundled binaries do every bit of the work.</p>
+      </div>
+      <div class="features">
+        <div class="card"><div class="ic">🤖</div><h3>AI clip suggestions</h3><p>Gemini 2.5 Flash (free tier) reads the transcript and picks the moments worth sharing.</p></div>
+        <div class="card"><div class="ic">✂️</div><h3>Real local cuts</h3><p><code>yt-dlp</code> downloads, <code>ffmpeg</code> cuts. Output is a normal <code>.mp4</code> — no watermarks.</p></div>
+        <div class="card"><div class="ic">⏱️</div><h3>Frame-level in/out</h3><p>Nudge the start and end of every clip before you cut. You keep final say over the edit.</p></div>
+        <div class="card"><div class="ic">▶️</div><h3>Inline preview</h3><p>Watch the exact clip range in an embedded player before committing to the cut.</p></div>
+        <div class="card"><div class="ic">🖼️</div><h3>Frames &amp; overlays</h3><p>Color borders or upload your own PNG overlay to brand every clip you export.</p></div>
+        <div class="card"><div class="ic">🔑</div><h3>Your key, stored locally</h3><p>Bring your own free Gemini key. It's saved on your device and never sent anywhere else.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DOWNLOAD -->
+  <section id="download">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="tc-eyebrow">// get it</div>
+        <h2>Download YT Clipper</h2>
+        <p>macOS · Windows · Linux — native installers, one codebase.</p>
+      </div>
+
+      <div class="dl-panel">
+        <div class="dl-hero">
+          <div class="dl-os">recommended for <b id="dl-os-name">your system</b></div>
+          <a class="btn btn-primary dl-primary-btn" id="dl-primary" href="https://github.com/zameel7/yt-clipper/releases/latest" target="_blank" rel="noopener">
+            <span id="dl-primary-label">Download latest</span>
+          </a>
+          <div class="dl-ver">
+            <span id="dl-version">latest release</span> ·
+            <a href="https://github.com/zameel7/yt-clipper/releases/latest" target="_blank" rel="noopener">all releases &amp; changelog →</a>
+          </div>
+        </div>
+
+        <div class="os-tabs" id="os-tabs">
+          <button class="os-tab" data-os="mac">🍎 macOS</button>
+          <button class="os-tab" data-os="windows">🪟 Windows</button>
+          <button class="os-tab" data-os="linux">🐧 Linux</button>
+        </div>
+
+        <div class="dl-all" id="dl-all"><!-- rows injected --></div>
+      </div>
+
+      <div class="callout" id="mac-note">
+        <span>🍎</span>
+        <span><b>macOS says "damaged"?</b> It's not — the app is unsigned. Clear the quarantine flag once:
+        <code>xattr -dr com.apple.quarantine /Applications/yt-clipper.app</code></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="wrap foot-in">
+      <div class="brand"><img src="icon.png" alt="" style="width:24px;height:24px;border-radius:6px;" /> YT Clipper</div>
+      <div class="foot-links">
+        <a href="https://github.com/zameel7/yt-clipper" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/zameel7/yt-clipper/releases" target="_blank" rel="noopener">Releases</a>
+        <a href="https://github.com/zameel7/yt-clipper/issues" target="_blank" rel="noopener">Report an issue</a>
+        <a href="https://github.com/zameel7/yt-clipper/blob/main/LICENSE" target="_blank" rel="noopener">MIT</a>
+      </div>
+    </div>
+    <div class="legal">
+      Downloading YouTube video may violate YouTube's Terms of Service and can infringe copyright.
+      Only clip content you own or are authorized to use. For personal use — you are responsible for how you use it.
+    </div>
+  </footer>
+
+  <script>
+  (function () {
+    "use strict";
+
+    var REPO = "zameel7/yt-clipper";
+    var RELEASES = "https://github.com/" + REPO + "/releases";
+    var FALLBACK_VERSION = "0.2.1";
+
+    /* theme */
+    var root = document.documentElement;
+    var savedTheme = null;
+    try { savedTheme = localStorage.getItem("ytc-theme"); } catch (e) {}
+    if (savedTheme) root.setAttribute("data-theme", savedTheme);
+    else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) root.setAttribute("data-theme", "light");
+    function paintThemeIcon() { document.getElementById("theme-icon").textContent = root.getAttribute("data-theme") === "light" ? "☾" : "☀"; }
+    paintThemeIcon();
+    document.getElementById("theme-toggle").addEventListener("click", function () {
+      var next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+      try { localStorage.setItem("ytc-theme", next); } catch (e) {}
+      paintThemeIcon();
+    });
+
+    /* OS / arch detection */
+    function detect() {
+      var ua = navigator.userAgent;
+      var plat = (navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || "";
+      var p = (plat + " " + ua).toLowerCase();
+      var os = "unknown", arch = "x64";
+      if (/mac|iphone|ipad|ipod/.test(p)) { os = "mac"; arch = "arm64"; }
+      else if (/win/.test(p)) { os = "windows"; arch = /arm/.test(p) ? "arm64" : "x64"; }
+      else if (/linux|x11|cros/.test(p)) { os = "linux"; arch = /aarch64|arm64/.test(p) ? "arm64" : "x64"; }
+      return { os: os, arch: arch };
+    }
+    var env = detect();
+    var OS_LABEL = { mac: "macOS", windows: "Windows", linux: "Linux", unknown: "your system" };
+
+    function catalog(v) {
+      return {
+        mac: { label: "macOS", badge: "Apple Silicon", items: [
+          { fmt: ".dmg", desc: "Disk image · Apple Silicon (M1–M4)", reco: true,
+            match: function (n) { return n.endsWith(".dmg"); }, fallback: "yt-clipper_" + v + "_aarch64.dmg" } ] },
+        windows: { label: "Windows", badge: "x64", items: [
+          { fmt: ".exe", desc: "Installer (setup) · x64", reco: true,
+            match: function (n) { return n.indexOf("setup.exe") !== -1 || n.endsWith(".exe"); }, fallback: "yt-clipper_" + v + "_x64-setup.exe" },
+          { fmt: ".msi", desc: "MSI package · x64", reco: false,
+            match: function (n) { return n.endsWith(".msi"); }, fallback: "yt-clipper_" + v + "_x64_en-US.msi" } ] },
+        linux: { label: "Linux", badge: "x64", items: [
+          { fmt: ".AppImage", desc: "Universal · chmod +x and run", reco: true,
+            match: function (n) { return n.endsWith(".appimage"); }, fallback: "yt-clipper_" + v + "_amd64.AppImage" },
+          { fmt: ".deb", desc: "Debian / Ubuntu · sudo apt install", reco: false,
+            match: function (n) { return n.endsWith(".deb"); }, fallback: "yt-clipper_" + v + "_amd64.deb" },
+          { fmt: ".rpm", desc: "Fedora / RHEL · sudo dnf install", reco: false,
+            match: function (n) { return n.endsWith(".rpm"); }, fallback: "yt-clipper-" + v + "-1.x86_64.rpm" } ] }
+      };
+    }
+
+    function fmtSize(bytes) {
+      if (!bytes) return "";
+      var mb = bytes / (1024 * 1024);
+      return mb >= 1 ? mb.toFixed(1) + " MB" : Math.round(bytes / 1024) + " KB";
+    }
+
+    var state = { version: FALLBACK_VERSION, assets: null, activeTab: env.os === "unknown" ? "mac" : env.os };
+
+    function resolve(item) {
+      var base = RELEASES + "/download/v" + state.version + "/";
+      if (state.assets) {
+        for (var i = 0; i < state.assets.length; i++) {
+          var a = state.assets[i];
+          if (item.match(a.name.toLowerCase())) return { url: a.browser_download_url, size: fmtSize(a.size) };
+        }
+      }
+      return { url: base + item.fallback, size: "" };
+    }
+
+    function render() {
+      var cat = catalog(state.version);
+      var recoOs = env.os === "unknown" ? "mac" : env.os;
+      var recoGroup = cat[recoOs];
+      var recoItem = recoGroup.items[0];
+      var recoResolved = resolve(recoItem);
+
+      document.getElementById("dl-os-name").textContent = OS_LABEL[env.os] || "your system";
+      document.getElementById("dl-version").textContent = "v" + state.version;
+      var primary = document.getElementById("dl-primary");
+      primary.href = recoResolved.url;
+      document.getElementById("dl-primary-label").innerHTML =
+        "↓ Download for " + recoGroup.label + " <span class='sz'>" + recoItem.fmt +
+        (recoResolved.size ? " · " + recoResolved.size : "") + "</span>";
+
+      var note = document.getElementById("hero-note");
+      note.textContent = env.os === "unknown" ? "available for macOS · Windows · Linux" : "detected " + OS_LABEL[env.os] + " — one click below ↓";
+
+      document.getElementById("mac-note").classList.toggle("hidden", env.os !== "mac" && state.activeTab !== "mac");
+
+      document.querySelectorAll(".os-tab").forEach(function (t) { t.classList.toggle("active", t.getAttribute("data-os") === state.activeTab); });
+
+      var group = cat[state.activeTab];
+      var html = '<div class="dl-os-title">' + group.label + ' <span class="badge">' + group.badge + '</span></div><div class="dl-rows">';
+      group.items.forEach(function (item) {
+        var r = resolve(item);
+        html += '<div class="dl-row' + (item.reco ? ' reco' : '') + '"><div class="dl-row-l">' +
+          '<div class="fmt">' + item.fmt + (item.reco ? ' <span class="reco-tag">RECOMMENDED</span>' : '') + '</div>' +
+          '<div class="meta">' + item.desc + (r.size ? ' · ' + r.size : '') + '</div></div>' +
+          '<a class="dl-dl" href="' + r.url + '" target="_blank" rel="noopener">Download</a></div>';
+      });
+      html += '</div>';
+      document.getElementById("dl-all").innerHTML = html;
+    }
+
+    document.getElementById("os-tabs").addEventListener("click", function (e) {
+      var t = e.target.closest(".os-tab");
+      if (!t) return;
+      state.activeTab = t.getAttribute("data-os");
+      render();
+    });
+
+    render();
+
+    fetch("https://api.github.com/repos/" + REPO + "/releases/latest", { headers: { "Accept": "application/vnd.github+json" } })
+      .then(function (r) { if (!r.ok) throw new Error("gh " + r.status); return r.json(); })
+      .then(function (data) {
+        if (data && data.tag_name) {
+          state.version = String(data.tag_name).replace(/^v/, "");
+          state.assets = data.assets || null;
+          render();
+        }
+      })
+      .catch(function () {});
+  })();
+  </script>
+</body>
+</html>
