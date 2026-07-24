@@ -5,6 +5,7 @@ import { save, open } from "@tauri-apps/plugin-dialog";
 import { revealItemInDir, openUrl } from "@tauri-apps/plugin-opener";
 import { load, Store } from "@tauri-apps/plugin-store";
 import { suggestClips, type Clip, type Segment } from "./gemini";
+import { checkForUpdate, checkForUpdateResult, type UpdateInfo } from "./update";
 import "./App.css";
 
 interface TranscriptResult {
@@ -65,6 +66,11 @@ export default function App() {
   const [cutMsg, setCutMsg] = useState("");
   const [saved, setSaved] = useState<Record<number, string>>({});
 
+  const [update, setUpdate] = useState<UpdateInfo | null>(null);
+  const [updateDismissed, setUpdateDismissed] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [checkMsg, setCheckMsg] = useState<string | null>(null);
+
   // Load saved API key.
   useEffect(() => {
     (async () => {
@@ -77,6 +83,13 @@ export default function App() {
     })();
   }, []);
 
+  // Check GitHub for a newer release on launch.
+  useEffect(() => {
+    checkForUpdate().then((info) => {
+      if (info) setUpdate(info);
+    });
+  }, []);
+
   // Listen for cut progress from Rust.
   useEffect(() => {
     const un = listen<{ stage: string; message: string }>("clip-progress", (e) => {
@@ -86,6 +99,22 @@ export default function App() {
       un.then((f) => f());
     };
   }, []);
+
+  async function manualCheckUpdate() {
+    setChecking(true);
+    setCheckMsg(null);
+    const r = await checkForUpdateResult();
+    if (r.status === "update") {
+      setUpdate(r.info);
+      setUpdateDismissed(false);
+      setCheckMsg(`Version ${r.info.version} is available.`);
+    } else if (r.status === "latest") {
+      setCheckMsg(`You're on the latest version (${r.current}).`);
+    } else {
+      setCheckMsg("Couldn't check for updates. Try again later.");
+    }
+    setChecking(false);
+  }
 
   async function saveKey() {
     const store = storeRef.current;
@@ -193,6 +222,26 @@ export default function App() {
           ⚙ Settings
         </button>
       </header>
+
+      {update && !updateDismissed && (
+        <div className="update-banner">
+          <span>
+            ⬆ Version <strong>{update.version}</strong> is available.
+          </span>
+          <div className="update-actions">
+            <button className="primary" onClick={() => openUrl(update.url)}>
+              Download
+            </button>
+            <button
+              className="ghost"
+              aria-label="Dismiss"
+              onClick={() => setUpdateDismissed(true)}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
 
       <p className="disclaimer">
         Downloads video locally for personal use only. Respect YouTube's Terms and
@@ -352,6 +401,15 @@ export default function App() {
               </a>
               . Stored locally on this machine.
             </p>
+
+            <div className="field update-check">
+              <span>Updates</span>
+              <button className="ghost" onClick={manualCheckUpdate} disabled={checking}>
+                {checking ? "Checking…" : "Check for updates"}
+              </button>
+              {checkMsg && <p className="hint">{checkMsg}</p>}
+            </div>
+
             <div className="modal-actions">
               {apiKey && (
                 <button className="ghost" onClick={() => setShowSettings(false)}>

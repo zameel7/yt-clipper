@@ -49,6 +49,46 @@ body {
   margin: 4px 0 16px;
 }
 
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin: 4px 0 12px;
+}
+
+.update-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.update-actions .ghost {
+  padding: 4px 8px;
+  line-height: 1;
+}
+
+.update-check {
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.update-check > span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.update-check > button {
+  align-self: flex-start;
+}
+
 .controls {
   background: var(--panel);
   border: 1px solid var(--border);
