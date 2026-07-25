@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -27,11 +27,11 @@
       --ink: #f6f5f3;
       --muted: #9a9aa8;
       --faint: #62626f;
-      --cut: #ff5a3c;      /* razor / accent */
-      --cut-2: #ff8a3c;
-      --amber: #ffc24d;    /* timeline selection */
+      --cut: #5b52e6;      /* brand indigo (from logo) */
+      --cut-2: #8378f2;
+      --amber: #a78bfa;    /* violet — timeline selection / highlight */
       --live: #35d07f;
-      --glow: rgba(255, 90, 60, 0.32);
+      --glow: rgba(91, 82, 230, 0.30);
       --radius: 14px;
       --maxw: 1140px;
       --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -48,7 +48,7 @@
       --ink: #16151a;
       --muted: #5a5964;
       --faint: #8b8a93;
-      --glow: rgba(255, 90, 60, 0.16);
+      --glow: rgba(91, 82, 230, 0.16);
     }
 
     * { box-sizing: border-box; }
@@ -200,8 +200,11 @@
 
     /* ---------- how: timeline ---------- */
     .rail { position: relative; display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
-    .rail::before { content: ""; position: absolute; left: 8%; right: 8%; top: 15px; height: 2px; background: linear-gradient(90deg, var(--cut), var(--amber)); opacity: .5; }
-    .node { position: relative; padding: 0 14px; }
+    .node { position: relative; padding: 0 16px; }
+    .node:not(:last-child)::after {
+      content: ""; position: absolute; top: 15px; left: 48px; width: calc(100% - 32px);
+      height: 2px; background: var(--line); opacity: .85;
+    }
     .node .mk { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 9px; background: var(--panel); border: 1px solid var(--line); font-family: var(--mono); font-size: 0.72rem; color: var(--cut); position: relative; z-index: 1; }
     .node .tc { font-family: var(--mono); font-size: 0.68rem; color: var(--faint); margin: 14px 0 4px; }
     .node h4 { font-family: var(--disp); font-weight: 600; font-size: 1.05rem; margin: 0 0 5px; letter-spacing: -0.01em; }
@@ -215,7 +218,9 @@
     .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
     .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px 22px; transition: transform .18s, border-color .18s; }
     .card:hover { transform: translateY(-3px); border-color: var(--faint); }
-    .card .ic { font-size: 1.15rem; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--panel-2); border: 1px solid var(--line); margin-bottom: 15px; }
+    .card .ic { width: 42px; height: 42px; border-radius: 11px; display: grid; place-items: center; color: var(--cut); background: color-mix(in srgb, var(--cut) 12%, var(--panel-2)); border: 1px solid color-mix(in srgb, var(--cut) 22%, var(--line)); margin-bottom: 16px; transition: transform .18s; }
+    .card:hover .ic { transform: scale(1.06) rotate(-3deg); }
+    .card .ic svg { width: 22px; height: 22px; }
     .card h3 { font-family: var(--disp); margin: 0 0 7px; font-size: 1.06rem; font-weight: 600; letter-spacing: -0.01em; }
     .card p { margin: 0; color: var(--muted); font-size: 0.92rem; }
     @media (max-width: 860px) { .features { grid-template-columns: 1fr 1fr; } }
@@ -233,9 +238,11 @@
     .dl-ver a { color: var(--muted); text-decoration: underline; text-underline-offset: 2px; }
 
     .os-tabs { display: flex; gap: 6px; justify-content: center; padding: 14px 12px 2px; flex-wrap: wrap; }
-    .os-tab { font-size: 0.86rem; font-weight: 600; color: var(--muted); padding: 7px 15px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; background: transparent; }
+    .os-tab { display: inline-flex; align-items: center; gap: 7px; font-size: 0.86rem; font-weight: 600; color: var(--muted); padding: 8px 15px; border-radius: 9px; cursor: pointer; border: 1px solid transparent; background: transparent; }
+    .os-tab svg { width: 16px; height: 16px; pointer-events: none; }
     .os-tab:hover { color: var(--ink); }
     .os-tab.active { color: var(--ink); background: var(--panel-2); border-color: var(--line); }
+    .os-tab.active svg { color: var(--cut); }
 
     .dl-all { padding: 8px 8px 14px; }
     .dl-os-title { display: flex; align-items: center; gap: 10px; padding: 14px 18px 8px; font-family: var(--disp); font-weight: 600; font-size: 0.98rem; }
@@ -378,12 +385,12 @@
         <p>No server, no upload, no account. Bundled binaries do every bit of the work.</p>
       </div>
       <div class="features">
-        <div class="card"><div class="ic">🤖</div><h3>AI clip suggestions</h3><p>Gemini 2.5 Flash (free tier) reads the transcript and picks the moments worth sharing.</p></div>
-        <div class="card"><div class="ic">✂️</div><h3>Real local cuts</h3><p><code>yt-dlp</code> downloads, <code>ffmpeg</code> cuts. Output is a normal <code>.mp4</code> — no watermarks.</p></div>
-        <div class="card"><div class="ic">⏱️</div><h3>Frame-level in/out</h3><p>Nudge the start and end of every clip before you cut. You keep final say over the edit.</p></div>
-        <div class="card"><div class="ic">▶️</div><h3>Inline preview</h3><p>Watch the exact clip range in an embedded player before committing to the cut.</p></div>
-        <div class="card"><div class="ic">🖼️</div><h3>Frames &amp; overlays</h3><p>Color borders or upload your own PNG overlay to brand every clip you export.</p></div>
-        <div class="card"><div class="ic">🔑</div><h3>Your key, stored locally</h3><p>Bring your own free Gemini key. It's saved on your device and never sent anywhere else.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.1986 9.94447C14.7649 9.5337 14.4859 8.98613 14.4085 8.39384L14.0056 5.31138L11.275 6.79724C10.7503 7.08274 10.1433 7.17888 9.55608 7.06948L6.49998 6.50015L7.06931 9.55625C7.17871 10.1435 7.08257 10.7505 6.79707 11.2751L5.31121 14.0057L8.39367 14.4086C8.98596 14.4861 9.53353 14.7651 9.94431 15.1987L12.0821 17.4557L13.4178 14.6486C13.6745 14.1092 14.109 13.6747 14.6484 13.418L17.4555 12.0823L15.1986 9.94447ZM15.2238 15.5079L13.0111 20.1581C12.8687 20.4573 12.5107 20.5844 12.2115 20.442C12.1448 20.4103 12.0845 20.3665 12.0337 20.3129L8.49229 16.5741C8.39749 16.474 8.27113 16.4096 8.13445 16.3918L3.02816 15.7243C2.69958 15.6814 2.46804 15.3802 2.51099 15.0516C2.52056 14.9784 2.54359 14.9075 2.5789 14.8426L5.04031 10.3192C5.1062 10.1981 5.12839 10.058 5.10314 9.92253L4.16 4.85991C4.09931 4.53414 4.3142 4.22086 4.63997 4.16017C4.7126 4.14664 4.78711 4.14664 4.85974 4.16017L9.92237 5.10331C10.0579 5.12855 10.198 5.10637 10.319 5.04048L14.8424 2.57907C15.1335 2.42068 15.4979 2.52825 15.6562 2.81931C15.6916 2.88421 15.7146 2.95507 15.7241 3.02833L16.3916 8.13462C16.4095 8.2713 16.4739 8.39766 16.5739 8.49245L20.3127 12.0338C20.5533 12.2617 20.5636 12.6415 20.3357 12.8821C20.2849 12.9357 20.2246 12.9795 20.1579 13.0112L15.5078 15.224C15.3833 15.2832 15.283 15.3835 15.2238 15.5079ZM16.0206 17.435L17.4348 16.0208L21.6775 20.2634L20.2633 21.6776L16.0206 17.435Z"/></svg></div><h3>AI clip suggestions</h3><p>Gemini 2.5 Flash (free tier) reads the transcript and picks the moments worth sharing.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 5.9967C10 6.7292 9.80311 7.41571 9.45936 8.0062L12 10.5825L18.7279 3.85457C19.509 3.07352 20.7753 3.07352 21.5563 3.85457L9.44618 15.9647C9.79807 16.5603 10 17.2549 10 17.9967C10 20.2058 8.20914 21.9967 6 21.9967C3.79086 21.9967 2 20.2058 2 17.9967C2 15.7876 3.79086 13.9967 6 13.9967C6.74181 13.9967 7.43645 14.1986 8.03197 14.5505L10.5858 11.9967L8.03197 9.44289C7.43645 9.79478 6.74181 9.9967 6 9.9967C3.79086 9.9967 2 8.20584 2 5.9967C2 3.78756 3.79086 1.9967 6 1.9967C8.20914 1.9967 10 3.78756 10 5.9967ZM8 5.9967C8 4.89213 7.10457 3.9967 6 3.9967C4.89543 3.9967 4 4.89213 4 5.9967C4 7.10127 4.89543 7.9967 6 7.9967C7.10457 7.9967 8 7.10127 8 5.9967ZM21.5563 20.1388C20.7753 20.9199 19.509 20.9199 18.7279 20.1388L13.4113 14.8222L14.8255 13.408L21.5563 20.1388ZM16 10.9967H18V12.9967H16V10.9967ZM20 10.9967H22V12.9967H20V10.9967ZM6 10.9967H8V12.9967H6V10.9967ZM2 10.9967H4V12.9967H2V10.9967ZM6 19.9967C7.10457 19.9967 8 19.1013 8 17.9967C8 16.8921 7.10457 15.9967 6 15.9967C4.89543 15.9967 4 16.8921 4 17.9967C4 19.1013 4.89543 19.9967 6 19.9967Z"/></svg></div><h3>Real local cuts</h3><p><code>yt-dlp</code> downloads, <code>ffmpeg</code> cuts. Output is a normal <code>.mp4</code> — no watermarks.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6.38231 5.9681C7.92199 4.73647 9.87499 4 12 4C14.125 4 16.078 4.73647 17.6177 5.9681L19.0711 4.51472L20.4853 5.92893L19.0319 7.38231C20.2635 8.92199 21 10.875 21 13C21 17.9706 16.9706 22 12 22C7.02944 22 3 17.9706 3 13C3 10.875 3.73647 8.92199 4.9681 7.38231L3.51472 5.92893L4.92893 4.51472L6.38231 5.9681ZM12 20C15.866 20 19 16.866 19 13C19 9.13401 15.866 6 12 6C8.13401 6 5 9.13401 5 13C5 16.866 8.13401 20 12 20ZM13 12H16L11 18.5V14H8L13 7.4952V12ZM8 1H16V3H8V1Z"/></svg></div><h3>Frame-level in/out</h3><p>Nudge the start and end of every clip before you cut. You keep final say over the edit.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM12 20C16.4183 20 20 16.4183 20 12C20 7.58172 16.4183 4 12 4C7.58172 4 4 7.58172 4 12C4 16.4183 7.58172 20 12 20ZM10.6219 8.41459L15.5008 11.6672C15.6846 11.7897 15.7343 12.0381 15.6117 12.2219C15.5824 12.2658 15.5447 12.3035 15.5008 12.3328L10.6219 15.5854C10.4381 15.708 10.1897 15.6583 10.0672 15.4745C10.0234 15.4088 10 15.3316 10 15.2526V8.74741C10 8.52649 10.1791 8.34741 10.4 8.34741C10.479 8.34741 10.5562 8.37078 10.6219 8.41459Z"/></svg></div><h3>Inline preview</h3><p>Watch the exact clip range in an embedded player before committing to the cut.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M20 3C20.5523 3 21 3.44772 21 4V5.757L19 7.757V5H5V13.1L9 9.1005L13.328 13.429L11.9132 14.8422L9 11.9289L5 15.928V19H15.533L16.2414 19.0012L17.57 17.671L18.8995 19H19V16.242L21 14.242V20C21 20.5523 20.5523 21 20 21H4C3.45 21 3 20.55 3 20V4C3 3.44772 3.44772 3 4 3H20ZM21.7782 7.80761L23.1924 9.22183L15.4142 17L13.9979 16.9979L14 15.5858L21.7782 7.80761ZM15.5 7C16.3284 7 17 7.67157 17 8.5C17 9.32843 16.3284 10 15.5 10C14.6716 10 14 9.32843 14 8.5C14 7.67157 14.6716 7 15.5 7Z"/></svg></div><h3>Frames &amp; overlays</h3><p>Color borders or upload your own PNG overlay to brand every clip you export.</p></div>
+        <div class="card"><div class="ic"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M10.7577 11.8281L18.6066 3.97919L20.0208 5.3934L18.6066 6.80761L21.0815 9.28249L19.6673 10.6967L17.1924 8.22183L15.7782 9.63604L17.8995 11.7574L16.4853 13.1716L14.364 11.0503L12.1719 13.2423C13.4581 15.1837 13.246 17.8251 11.5355 19.5355C9.58291 21.4882 6.41709 21.4882 4.46447 19.5355C2.51184 17.5829 2.51184 14.4171 4.46447 12.4645C6.17493 10.754 8.81633 10.5419 10.7577 11.8281ZM10.1213 18.1213C11.2929 16.9497 11.2929 15.0503 10.1213 13.8787C8.94975 12.7071 7.05025 12.7071 5.87868 13.8787C4.70711 15.0503 4.70711 16.9497 5.87868 18.1213C7.05025 19.2929 8.94975 19.2929 10.1213 18.1213Z"/></svg></div><h3>Your key, stored locally</h3><p>Bring your own free Gemini key. It's saved on your device and never sent anywhere else.</p></div>
       </div>
     </div>
   </section>
@@ -410,16 +417,16 @@
         </div>
 
         <div class="os-tabs" id="os-tabs">
-          <button class="os-tab" data-os="mac">🍎 macOS</button>
-          <button class="os-tab" data-os="windows">🪟 Windows</button>
-          <button class="os-tab" data-os="linux">🐧 Linux</button>
+          <button class="os-tab" data-os="mac"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.6734 7.22198C10.7974 7.22198 9.44138 6.22598 8.01338 6.26198C6.12938 6.28598 4.40138 7.35397 3.42938 9.04597C1.47338 12.442 2.92538 17.458 4.83338 20.218C5.76938 21.562 6.87338 23.074 8.33738 23.026C9.74138 22.966 10.2694 22.114 11.9734 22.114C13.6654 22.114 14.1454 23.026 15.6334 22.99C17.1454 22.966 18.1054 21.622 19.0294 20.266C20.0974 18.706 20.5414 17.194 20.5654 17.11C20.5294 17.098 17.6254 15.982 17.5894 12.622C17.5654 9.81397 19.8814 8.46998 19.9894 8.40998C18.6694 6.47798 16.6414 6.26198 15.9334 6.21398C14.0854 6.06998 12.5374 7.22198 11.6734 7.22198ZM14.7934 4.38998C15.5734 3.45398 16.0894 2.14598 15.9454 0.849976C14.8294 0.897976 13.4854 1.59398 12.6814 2.52998C11.9614 3.35798 11.3374 4.68998 11.5054 5.96198C12.7414 6.05798 14.0134 5.32598 14.7934 4.38998Z"/></svg> macOS</button>
+          <button class="os-tab" data-os="windows"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.00098 5.47902L10.3778 4.4625V11.5902H3.00098V5.47902ZM3.00098 18.521L10.3778 19.5375V12.4982H3.00098V18.521ZM11.1894 19.646L21.001 21V12.4982H11.1894V19.646ZM11.1894 4.35402V11.5902H21.001V3L11.1894 4.35402Z"/></svg> Windows</button>
+          <button class="os-tab" data-os="linux"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M22.001 12C22.001 17.5224 17.524 22 12.001 22C6.47798 22 2.00098 17.5224 2.00098 12C2.00098 6.4771 6.47833 2 12.001 2C17.524 2 22.001 6.4771 22.001 12ZM5.20128 10.6642C4.46363 10.6642 3.86613 11.2623 3.86613 12C3.86613 12.7372 4.46363 13.3349 5.20128 13.3349C5.93848 13.3349 6.53628 12.7372 6.53628 12C6.53628 11.2622 5.93848 10.6642 5.20128 10.6642ZM14.7337 16.7325C14.0954 17.1015 13.8763 17.9175 14.2454 18.5558C14.6137 19.1942 15.4296 19.4137 16.0682 19.0448C16.7067 18.6759 16.9257 17.8595 16.5571 17.2208C16.1884 16.5832 15.3721 16.3644 14.7337 16.7325V16.7325ZM8.10133 12C8.10133 10.6808 8.75663 9.5152 9.75958 8.80915L8.78348 7.174C7.61518 7.955 6.74598 9.1485 6.38498 10.545C6.80648 10.8895 7.07613 11.4131 7.07613 12C7.07613 12.586 6.80643 13.1097 6.38493 13.4543C6.74583 14.8516 7.61503 16.0448 8.78343 16.826L9.75953 15.1903C8.75653 14.4848 8.10128 13.32 8.10128 12L8.10133 12ZM12.001 8.09975C14.0385 8.09975 15.7098 9.66175 15.8853 11.654L17.788 11.6261C17.6942 10.1551 17.0518 8.83495 16.0645 7.86435C15.5568 8.05565 14.9705 8.02685 14.4637 7.7342C13.9559 7.4412 13.6376 6.9472 13.5506 6.4104C13.0571 6.27455 12.538 6.2005 12.001 6.2005C11.0782 6.2005 10.2053 6.41685 9.43058 6.80035L10.3582 8.46275C10.8577 8.23045 11.4141 8.09975 12.001 8.09975ZM12.001 15.8995C11.4141 15.8995 10.8576 15.7691 10.3585 15.537L9.43063 17.1991C10.2055 17.5831 11.0782 17.8004 12.001 17.8004C12.538 17.8004 13.0575 17.7255 13.5506 17.5888C13.6376 17.0526 13.9561 16.5586 14.4638 16.2652C14.971 15.9726 15.5569 15.9435 16.0646 16.1349C17.0519 15.1642 17.6942 13.8441 17.7881 12.3732L15.8846 12.3456C15.7099 14.338 14.0386 15.8996 12.0011 15.8996L12.001 15.8995ZM14.7334 7.26675C15.372 7.6349 16.1883 7.4169 16.5566 6.77845C16.9257 6.1396 16.7071 5.32395 16.0683 4.95505C15.4296 4.58605 14.6138 4.8048 14.2447 5.44345C13.8763 6.08195 14.0954 6.89795 14.7334 7.2667V7.26675Z"/></svg> Linux</button>
         </div>
 
         <div class="dl-all" id="dl-all"><!-- rows injected --></div>
       </div>
 
       <div class="callout" id="mac-note">
-        <span>🍎</span>
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width:20px;height:20px;flex-shrink:0;color:var(--cut);"><path d="M11.6734 7.22198C10.7974 7.22198 9.44138 6.22598 8.01338 6.26198C6.12938 6.28598 4.40138 7.35397 3.42938 9.04597C1.47338 12.442 2.92538 17.458 4.83338 20.218C5.76938 21.562 6.87338 23.074 8.33738 23.026C9.74138 22.966 10.2694 22.114 11.9734 22.114C13.6654 22.114 14.1454 23.026 15.6334 22.99C17.1454 22.966 18.1054 21.622 19.0294 20.266C20.0974 18.706 20.5414 17.194 20.5654 17.11C20.5294 17.098 17.6254 15.982 17.5894 12.622C17.5654 9.81397 19.8814 8.46998 19.9894 8.40998C18.6694 6.47798 16.6414 6.26198 15.9334 6.21398C14.0854 6.06998 12.5374 7.22198 11.6734 7.22198ZM14.7934 4.38998C15.5734 3.45398 16.0894 2.14598 15.9454 0.849976C14.8294 0.897976 13.4854 1.59398 12.6814 2.52998C11.9614 3.35798 11.3374 4.68998 11.5054 5.96198C12.7414 6.05798 14.0134 5.32598 14.7934 4.38998Z"/></svg>
         <span><b>macOS says "damaged"?</b> It's not — the app is unsigned. Clear the quarantine flag once:
         <code>xattr -dr com.apple.quarantine /Applications/yt-clipper.app</code></span>
       </div>
@@ -455,8 +462,7 @@
     var root = document.documentElement;
     var savedTheme = null;
     try { savedTheme = localStorage.getItem("ytc-theme"); } catch (e) {}
-    if (savedTheme) root.setAttribute("data-theme", savedTheme);
-    else if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) root.setAttribute("data-theme", "light");
+    root.setAttribute("data-theme", savedTheme || "light");
     function paintThemeIcon() { document.getElementById("theme-icon").textContent = root.getAttribute("data-theme") === "light" ? "☾" : "☀"; }
     paintThemeIcon();
     document.getElementById("theme-toggle").addEventListener("click", function () {
