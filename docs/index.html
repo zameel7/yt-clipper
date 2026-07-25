@@ -175,6 +175,7 @@
       background: rgba(8,8,12,.72); backdrop-filter: blur(3px); color: #fff;
       font-family: var(--mono); font-size: 0.78rem; text-align: center; padding: 0 16px;
     }
+    .stage-status[hidden] { display: none; }
     .stage-status.err { background: rgba(40,10,14,.82); color: #ffd3cf; }
     .stage-status.done { color: #8ff0bc; }
     .spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; animation: spin .7s linear infinite; flex-shrink: 0; }
@@ -182,6 +183,7 @@
     @keyframes spin { to { transform: rotate(360deg); } }
     .demo-hint { margin: 2px 2px 0; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); line-height: 1.5; }
     .demo-hint b { color: var(--muted); font-weight: 700; }
+    #demo-clips { display: flex; flex-direction: column; gap: 8px; }
     .clip-empty {
       text-align: center; padding: 22px 16px; border: 1px dashed var(--line);
       border-radius: 11px; color: var(--faint); font-size: 0.86rem; background: var(--bg);
