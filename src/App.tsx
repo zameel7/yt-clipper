@@ -47,6 +47,7 @@ export default function App() {
   const [apiKey, setApiKey] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [keyDraft, setKeyDraft] = useState("");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   const [url, setUrl] = useState("");
   const [count, setCount] = useState(5);
@@ -80,8 +81,25 @@ export default function App() {
       setApiKey(k);
       setKeyDraft(k);
       if (!k) setShowSettings(true);
+      const t = (await store.get<string>("theme")) ?? "dark";
+      setTheme(t === "light" ? "light" : "dark");
     })();
   }, []);
+
+  // Apply the theme to the document root.
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+  }, [theme]);
+
+  async function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    const store = storeRef.current;
+    if (store) {
+      await store.set("theme", next);
+      await store.save();
+    }
+  }
 
   // Check GitHub for a newer release on launch.
   useEffect(() => {
@@ -218,9 +236,19 @@ export default function App() {
     <main className="app">
       <header className="topbar">
         <h1>🎬 YT Clipper</h1>
-        <button className="ghost" onClick={() => setShowSettings(true)}>
-          ⚙ Settings
-        </button>
+        <div className="topbar-actions">
+          <button
+            className="icon-toggle"
+            onClick={toggleTheme}
+            title={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"}
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? "☀" : "☾"}
+          </button>
+          <button className="ghost" onClick={() => setShowSettings(true)}>
+            ⚙ Settings
+          </button>
+        </div>
       </header>
 
       {update && !updateDismissed && (

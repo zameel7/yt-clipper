@@ -1,4 +1,5 @@
-:root {
+:root,
+:root[data-theme="dark"] {
   --bg: #0f1115;
   --panel: #191c23;
   --panel-2: #21252e;
@@ -8,7 +9,30 @@
   --accent: #6366f1;
   --accent-hover: #7c7ff2;
   --danger: #ef4444;
+  --info-bg: #1e2a44;
+  --info-text: #bcd0ff;
+  --error-bg: #3a1d1d;
+  --error-text: #ffb4b4;
+  --preview-bg: #000;
   color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f6f6fa;
+  --panel: #ffffff;
+  --panel-2: #f0f1f6;
+  --border: #e3e4ec;
+  --text: #191a20;
+  --muted: #5c616e;
+  --accent: #5b52e6;
+  --accent-hover: #6f66f0;
+  --danger: #dc2626;
+  --info-bg: #e6ecfe;
+  --info-text: #2b3f9e;
+  --error-bg: #fce4e4;
+  --error-text: #b42318;
+  --preview-bg: #e9eaf0;
+  color-scheme: light;
 }
 
 * {
@@ -37,6 +61,28 @@ body {
 .topbar h1 {
   font-size: 22px;
   margin: 4px 0;
+}
+
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.icon-toggle {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  font-size: 16px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.icon-toggle:hover {
+  background: var(--panel-2);
 }
 
 .disclaimer {
@@ -181,13 +227,13 @@ button:disabled {
 }
 
 .banner.info {
-  background: #1e2a44;
-  color: #bcd0ff;
+  background: var(--info-bg);
+  color: var(--info-text);
 }
 
 .banner.error {
-  background: #3a1d1d;
-  color: #ffb4b4;
+  background: var(--error-bg);
+  color: var(--error-text);
 }
 
 .clips {
@@ -282,7 +328,7 @@ button:disabled {
   border-radius: 8px;
   overflow: hidden;
   aspect-ratio: 16 / 9;
-  background: #000;
+  background: var(--preview-bg);
 }
 
 .preview iframe {
