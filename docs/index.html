@@ -182,6 +182,51 @@
     .demo-hint { margin: 2px 2px 0; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); line-height: 1.5; }
     .demo-hint b { color: var(--muted); font-weight: 700; }
 
+    /* hero (centered) + dedicated demo section */
+    .hero-center { max-width: 760px; margin: 0 auto; text-align: center; }
+    .hero-center .sub { margin-left: auto; margin-right: auto; }
+    .hero-center .hero-cta { justify-content: center; }
+    .demo-sec { padding: 8px 0 76px; }
+    .app-wrap { position: relative; max-width: 660px; margin: 0 auto; }
+    .app-wrap .app { transform: none; }
+    .app-wrap .app:hover { transform: none; }
+
+    /* button invitation pulse (stops once user interacts) */
+    .app-wrap:not(.started) .app-go { animation: goPulse 1.9s ease-in-out infinite; }
+    @keyframes goPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(91,82,230,.0); }
+      50% { box-shadow: 0 0 0 5px rgba(91,82,230,.28); }
+    }
+
+    /* guiding cursor that glides to the button and taps */
+    .demo-cursor { position: absolute; left: 52%; top: 66%; width: 24px; height: 24px; z-index: 6; pointer-events: none; color: #fff; filter: drop-shadow(0 2px 3px rgba(0,0,0,.45)); animation: cursorGuide 5.2s ease-in-out infinite; }
+    .demo-cursor svg { width: 100%; height: 100%; display: block; }
+    .demo-cursor::after {
+      content: ""; position: absolute; left: 2px; top: 2px; width: 10px; height: 10px; border-radius: 50%;
+      border: 2px solid var(--cut); opacity: 0; transform: scale(.4); animation: cursorTap 5.2s ease-in-out infinite;
+    }
+    @keyframes cursorGuide {
+      0%   { left: 52%; top: 66%; opacity: 0; }
+      12%  { opacity: 1; }
+      42%  { left: 83%; top: 7%; opacity: 1; transform: scale(1); }
+      50%  { left: 83%; top: 7%; transform: scale(.82); }
+      58%  { left: 83%; top: 7%; transform: scale(1); }
+      80%  { left: 83%; top: 7%; opacity: 1; }
+      92%  { left: 83%; top: 7%; opacity: 0; }
+      100% { left: 52%; top: 66%; opacity: 0; }
+    }
+    @keyframes cursorTap {
+      0%, 44% { opacity: 0; transform: scale(.4); }
+      50% { opacity: .9; transform: scale(1); }
+      64% { opacity: 0; transform: scale(2.1); }
+      100% { opacity: 0; transform: scale(2.1); }
+    }
+    .app-wrap.started .demo-cursor { display: none; }
+    @media (prefers-reduced-motion: reduce) {
+      .demo-cursor { display: none; }
+      .app-wrap:not(.started) .app-go { animation: none; }
+    }
+
     .stage { position: relative; border-radius: 10px; overflow: hidden; border: 1px solid var(--line-soft); }
     .stage-thumb {
       aspect-ratio: 16 / 8.4; width: 100%;
@@ -323,64 +368,19 @@
 
   <!-- HERO -->
   <header class="hero" id="top">
-    <div class="wrap hero-grid">
-      <div>
-        <span class="pill"><span class="dot"></span> free · local · no account</span>
-        <h1>Find the best <span class="cut-word">40&nbsp;seconds</span> in a 40&#8209;minute video.</h1>
-        <p class="sub">
-          Paste a YouTube URL. AI reads the transcript and marks the moments worth sharing.
-          Fine-tune the in and out, preview inline, and export real <code>.mp4</code> clips —
-          every frame processed on your own machine.
-        </p>
-        <div class="hero-cta">
-          <a class="btn btn-primary" href="#download" id="hero-download">↓ Download for your OS</a>
-          <a class="btn btn-ghost" href="https://github.com/zameel7/yt-clipper" target="_blank" rel="noopener">★ Star on GitHub</a>
-        </div>
-        <p class="hero-note" id="hero-note">detecting platform…</p>
+    <div class="wrap hero-center">
+      <span class="pill"><span class="dot"></span> free · local · no account</span>
+      <h1>Find the best <span class="cut-word">40&nbsp;seconds</span> in a 40&#8209;minute video.</h1>
+      <p class="sub">
+        Paste a YouTube URL. AI reads the transcript and marks the moments worth sharing.
+        Fine-tune the in and out, preview inline, and export real <code>.mp4</code> clips —
+        every frame processed on your own machine.
+      </p>
+      <div class="hero-cta">
+        <a class="btn btn-primary" href="#download" id="hero-download">↓ Download for your OS</a>
+        <a class="btn btn-ghost" href="#try">▷ See it work</a>
       </div>
-
-      <!-- signature: live demo window -->
-      <div class="app" aria-label="YT Clipper live demo">
-        <form class="app-bar" id="demo-form">
-          <div class="dots"><span></span><span></span><span></span></div>
-          <input class="app-url" id="demo-url" type="text" spellcheck="false" autocomplete="off"
-                 placeholder="Paste a YouTube URL…" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
-          <button class="app-go" id="demo-go" type="submit">Get suggestions</button>
-        </form>
-        <div class="app-body">
-          <div class="stage">
-            <div class="stage-thumb"><div class="play"></div></div>
-            <div class="dur">12:34</div>
-            <div class="scrub">
-              <div class="track">
-                <div class="sel"><span class="handle l"></span><span class="handle r"></span></div>
-                <div class="playhead"></div>
-              </div>
-            </div>
-            <div class="stage-status" id="demo-status" hidden><span class="spin"></span><span id="demo-status-text"></span></div>
-          </div>
-
-          <div id="demo-clips">
-            <div class="clip on">
-              <div class="clip-tc">00:14 → 00:52</div>
-              <div class="clip-main">
-                <div class="clip-title">The counter-intuitive part everyone skips</div>
-                <div class="clip-sub">38s · suggested by AI</div>
-              </div>
-              <div class="clip-cut">✂ Cut</div>
-            </div>
-            <div class="clip">
-              <div class="clip-tc">03:02 → 03:29</div>
-              <div class="clip-main">
-                <div class="clip-title">Live demo, no edits</div>
-                <div class="clip-sub">27s · suggested by AI</div>
-              </div>
-              <div class="clip-cut">✂ Cut</div>
-            </div>
-          </div>
-          <p class="demo-hint" id="demo-hint">↑ Real suggestions — paste any YouTube URL and hit <b>Get suggestions</b>.</p>
-        </div>
-      </div>
+      <p class="hero-note" id="hero-note">detecting platform…</p>
     </div>
 
     <div class="strip">
@@ -392,6 +392,64 @@
       </div>
     </div>
   </header>
+
+  <!-- DEMO -->
+  <section class="demo-sec" id="try">
+    <div class="wrap">
+      <div class="sec-head center">
+        <div class="tc-eyebrow">// try it</div>
+        <h2>Paste a URL, watch it find the moments</h2>
+        <p>A preview of the real flow — hit <b>Get suggestions</b>.</p>
+      </div>
+
+      <div class="app-wrap" id="app-wrap">
+        <div class="demo-cursor" id="demo-cursor" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 2l14 8-6 1.6L15 18l-2.6 1L9 11.6 4 15z"/></svg>
+        </div>
+        <div class="app" aria-label="YT Clipper demo">
+          <form class="app-bar" id="demo-form">
+            <div class="dots"><span></span><span></span><span></span></div>
+            <input class="app-url" id="demo-url" type="text" spellcheck="false" autocomplete="off"
+                   placeholder="Paste a YouTube URL…" value="https://www.youtube.com/watch?v=dQw4w9WgXcQ" />
+            <button class="app-go" id="demo-go" type="submit">Get suggestions</button>
+          </form>
+          <div class="app-body">
+            <div class="stage">
+              <div class="stage-thumb"><div class="play"></div></div>
+              <div class="dur">12:34</div>
+              <div class="scrub">
+                <div class="track">
+                  <div class="sel"><span class="handle l"></span><span class="handle r"></span></div>
+                  <div class="playhead"></div>
+                </div>
+              </div>
+              <div class="stage-status" id="demo-status" hidden><span class="spin"></span><span id="demo-status-text"></span></div>
+            </div>
+
+            <div id="demo-clips">
+              <div class="clip on">
+                <div class="clip-tc">00:14 → 00:52</div>
+                <div class="clip-main">
+                  <div class="clip-title">The counter-intuitive part everyone skips</div>
+                  <div class="clip-sub">38s · suggested by AI</div>
+                </div>
+                <div class="clip-cut">✂ Cut</div>
+              </div>
+              <div class="clip">
+                <div class="clip-tc">03:02 → 03:29</div>
+                <div class="clip-main">
+                  <div class="clip-title">Live demo, no edits</div>
+                  <div class="clip-sub">27s · suggested by AI</div>
+                </div>
+                <div class="clip-cut">✂ Cut</div>
+              </div>
+            </div>
+            <p class="demo-hint" id="demo-hint">Sample suggestions — the app runs this on <b>your</b> video, then cuts the .mp4 locally.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- HOW -->
   <section id="how">
@@ -628,7 +686,13 @@
     var statusText = document.getElementById("demo-status-text");
     var clipsEl = document.getElementById("demo-clips");
     var hint = document.getElementById("demo-hint");
+    var wrap = document.getElementById("app-wrap");
     if (!form) return;
+
+    // Stop the guiding cursor + button pulse as soon as the user engages.
+    ["pointerdown", "focusin"].forEach(function (ev) {
+      wrap.addEventListener(ev, function () { wrap.classList.add("started"); }, { once: true });
+    });
 
     // Sample suggestions — a believable preview. The real app reads YOUR video's
     // transcript locally and produces these live, then cuts the .mp4.
@@ -671,6 +735,7 @@
       e.preventDefault();
       if (!input.value.trim()) { input.focus(); return; }
 
+      wrap.classList.add("started");
       clearTimers();
       go.disabled = true;
       go.textContent = "Working…";
