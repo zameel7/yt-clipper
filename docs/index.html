@@ -618,13 +618,9 @@
   </script>
 
   <script>
-  /* ---- live demo: real suggestions via the Cloudflare Worker proxy ---- */
+  /* ---- hero demo: a scripted preview of the app's suggest flow ---- */
   (function () {
     "use strict";
-    // Point this at your deployed Worker (see worker/README.md). If unset or
-    // unreachable, the demo keeps its static sample clips and shows a note.
-    var DEMO_API = window.YTC_DEMO_API || "https://yt-clipper-demo.zameel7.workers.dev/suggest";
-
     var form = document.getElementById("demo-form");
     var input = document.getElementById("demo-url");
     var go = document.getElementById("demo-go");
@@ -633,6 +629,14 @@
     var clipsEl = document.getElementById("demo-clips");
     var hint = document.getElementById("demo-hint");
     if (!form) return;
+
+    // Sample suggestions — a believable preview. The real app reads YOUR video's
+    // transcript locally and produces these live, then cuts the .mp4.
+    var SAMPLE = [
+      { start: 73, end: 112, title: "The idea that reframes everything", reason: "Self-contained explainer that hooks in the first five seconds." },
+      { start: 305, end: 339, title: "Wait — it actually works", reason: "A live payoff moment that lands without any setup." },
+      { start: 588, end: 621, title: "The mistake almost everyone makes", reason: "A punchy warning that stands on its own as a short." },
+    ];
 
     function mmss(sec) {
       var s = Math.max(0, Math.round(sec));
@@ -643,12 +647,8 @@
         return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
       });
     }
-    function showStatus(text, isErr) {
-      statusText.textContent = text;
-      status.hidden = false;
-      status.classList.toggle("err", !!isErr);
-    }
-    function hideStatus() { status.hidden = true; status.classList.remove("err"); }
+    function showStatus(text) { statusText.textContent = text; status.hidden = false; }
+    function hideStatus() { status.hidden = true; }
 
     function renderClips(clips) {
       clipsEl.innerHTML = clips.map(function (c, i) {
@@ -657,67 +657,41 @@
           '<div class="clip-tc">' + mmss(c.start) + ' → ' + mmss(c.end) + '</div>' +
           '<div class="clip-main">' +
             '<div class="clip-title">' + esc(c.title) + '</div>' +
-            '<div class="clip-sub">' + dur + 's · ' + esc(c.reason || "suggested by AI") + '</div>' +
+            '<div class="clip-sub">' + dur + 's · ' + esc(c.reason) + '</div>' +
           '</div>' +
           '<div class="clip-cut">✂ Cut</div>' +
         '</div>';
       }).join("");
     }
 
-    var staging = null;
-    function stageMessages() {
-      // Single round-trip does both steps; fake the two-stage feel while waiting.
-      var msgs = ["Fetching transcript…", "Reading captions…", "Asking Gemini for clip ideas…"];
-      var i = 0;
-      showStatus(msgs[0], false);
-      staging = setInterval(function () {
-        i = Math.min(i + 1, msgs.length - 1);
-        showStatus(msgs[i], false);
-      }, 1400);
-    }
-    function stopStaging() { if (staging) { clearInterval(staging); staging = null; } }
+    var timers = [];
+    function clearTimers() { timers.forEach(clearTimeout); timers = []; }
 
     form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var url = input.value.trim();
-      if (!url) { input.focus(); return; }
+      if (!input.value.trim()) { input.focus(); return; }
 
+      clearTimers();
       go.disabled = true;
       go.textContent = "Working…";
-      if (hint) hint.textContent = "Reading the video and asking Gemini — first run can take a few seconds.";
-      stageMessages();
+      if (hint) hint.textContent = "Scanning the transcript…";
 
-      fetch(DEMO_API, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url, count: 4, length: 30 }),
-      })
-        .then(function (r) {
-          return r.json().then(function (data) {
-            if (!r.ok) throw new Error(data && data.error ? data.error : "Request failed (" + r.status + ")");
-            return data;
-          });
-        })
-        .then(function (data) {
-          stopStaging();
-          hideStatus();
-          if (!data.clips || !data.clips.length) throw new Error("No clips came back.");
-          renderClips(data.clips);
-          if (hint) {
-            hint.innerHTML = "✓ " + data.clips.length + " real suggestions" +
-              (data.language ? " · captions: " + esc(data.language) : "") +
-              " — this is exactly what the app does, then cuts the .mp4 locally.";
-          }
-        })
-        .catch(function (err) {
-          stopStaging();
-          showStatus(String(err.message || err), true);
-          if (hint) hint.textContent = "Demo unavailable right now — the desktop app runs this locally with bundled yt-dlp.";
-        })
-        .finally(function () {
-          go.disabled = false;
-          go.textContent = "Get suggestions";
-        });
+      var steps = [
+        [0, "Fetching transcript…"],
+        [900, "Reading captions…"],
+        [1800, "Asking Gemini for clip ideas…"],
+      ];
+      steps.forEach(function (s) { timers.push(setTimeout(function () { showStatus(s[1]); }, s[0])); });
+
+      timers.push(setTimeout(function () {
+        hideStatus();
+        renderClips(SAMPLE);
+        go.disabled = false;
+        go.textContent = "Get suggestions";
+        if (hint) {
+          hint.innerHTML = "Preview — sample suggestions. The app runs this on <b>your</b> video and cuts the real .mp4 locally.";
+        }
+      }, 2900));
     });
   })();
   </script>
