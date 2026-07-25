@@ -346,11 +346,23 @@ async fn cut_clip(
     let src_str = src.to_string_lossy().to_string();
 
     emit("download", "Downloading video…");
+
+    // Prefer best video + best audio (up to 1080p+ DASH), merged by our bundled
+    // ffmpeg. Progressive `best[ext=mp4]` alone caps at 720p, so the old
+    // single-file approach quietly lowered quality. Passing an explicit
+    // --ffmpeg-location keeps yt-dlp on the bundled ffmpeg (no system clash).
+    let ffmpeg = sidecar_path("ffmpeg");
+    let format = if ffmpeg.is_some() {
+        // H.264 + AAC first (clean remux, widest compatibility), then any
+        // video+audio, then any progressive file as a last resort.
+        "bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b[ext=mp4]/best".to_string()
+    } else {
+        "best[ext=mp4]/best".to_string()
+    };
+
     let mut dl_args: Vec<String> = vec![
-        // Single pre-muxed file (has both audio + video) so yt-dlp never needs
-        // to merge — no ffmpeg invoked here, no clash with a system ffmpeg.
         "-f".into(),
-        "best[ext=mp4]/best".into(),
+        format,
         // YouTube intermittently 403s a stream URL; retry and let yt-dlp fall
         // back to another player client instead of failing the whole cut.
         "--retries".into(),
@@ -366,6 +378,13 @@ async fn cut_clip(
         src_str.clone(),
         url.clone(),
     ];
+    if let Some(ff) = &ffmpeg {
+        // Merge DASH video+audio into an mp4 with the bundled ffmpeg.
+        dl_args.push("--ffmpeg-location".into());
+        dl_args.push(ff.clone());
+        dl_args.push("--merge-output-format".into());
+        dl_args.push("mp4".into());
+    }
     dl_args.extend(ytdlp_extra_args());
 
     let dl = app
@@ -398,16 +417,22 @@ async fn cut_clip(
         src_str.clone(),
     ];
 
+    // Only the frame/overlay paths re-encode; keep it visually near-lossless
+    // (CRF 18) so applying a frame doesn't noticeably degrade the clip.
     let reencode = |a: &mut Vec<String>| {
         a.extend([
             "-c:v".into(),
             "libx264".into(),
             "-preset".into(),
-            "veryfast".into(),
+            "fast".into(),
+            "-crf".into(),
+            "18".into(),
             "-pix_fmt".into(),
             "yuv420p".into(),
             "-c:a".into(),
             "aac".into(),
+            "-b:a".into(),
+            "192k".into(),
         ]);
     };
 
