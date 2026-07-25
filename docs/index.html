@@ -176,11 +176,17 @@
       font-family: var(--mono); font-size: 0.78rem; text-align: center; padding: 0 16px;
     }
     .stage-status.err { background: rgba(40,10,14,.82); color: #ffd3cf; }
+    .stage-status.done { color: #8ff0bc; }
     .spin { width: 15px; height: 15px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); border-top-color: #fff; animation: spin .7s linear infinite; flex-shrink: 0; }
-    .stage-status.err .spin { display: none; }
+    .stage-status.err .spin, .stage-status.done .spin { display: none; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .demo-hint { margin: 2px 2px 0; font-family: var(--mono); font-size: 0.68rem; color: var(--faint); line-height: 1.5; }
     .demo-hint b { color: var(--muted); font-weight: 700; }
+    .clip-empty {
+      text-align: center; padding: 22px 16px; border: 1px dashed var(--line);
+      border-radius: 11px; color: var(--faint); font-size: 0.86rem; background: var(--bg);
+    }
+    .clip-empty b { color: var(--muted); font-weight: 650; }
 
     /* hero (centered) + dedicated demo section */
     .hero-center { max-width: 760px; margin: 0 auto; text-align: center; }
@@ -427,24 +433,9 @@
             </div>
 
             <div id="demo-clips">
-              <div class="clip on">
-                <div class="clip-tc">00:14 → 00:52</div>
-                <div class="clip-main">
-                  <div class="clip-title">The counter-intuitive part everyone skips</div>
-                  <div class="clip-sub">38s · suggested by AI</div>
-                </div>
-                <div class="clip-cut">✂ Cut</div>
-              </div>
-              <div class="clip">
-                <div class="clip-tc">03:02 → 03:29</div>
-                <div class="clip-main">
-                  <div class="clip-title">Live demo, no edits</div>
-                  <div class="clip-sub">27s · suggested by AI</div>
-                </div>
-                <div class="clip-cut">✂ Cut</div>
-              </div>
+              <div class="clip-empty">AI-picked moments appear here — hit <b>Get suggestions</b>.</div>
             </div>
-            <p class="demo-hint" id="demo-hint">Sample suggestions — the app runs this on <b>your</b> video, then cuts the .mp4 locally.</p>
+            <p class="demo-hint" id="demo-hint">A preview of the real flow. The app runs this on <b>your</b> video, then cuts the .mp4 locally.</p>
           </div>
         </div>
       </div>
@@ -711,8 +702,9 @@
         return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
       });
     }
-    function showStatus(text) { statusText.textContent = text; status.hidden = false; }
-    function hideStatus() { status.hidden = true; }
+    function showStatus(text) { statusText.textContent = text; status.hidden = false; status.classList.remove("done"); }
+    function showDone(text) { statusText.textContent = text; status.hidden = false; status.classList.add("done"); }
+    function hideStatus() { status.hidden = true; status.classList.remove("done"); }
 
     function renderClips(clips) {
       clipsEl.innerHTML = clips.map(function (c, i) {
@@ -743,10 +735,16 @@
 
       var steps = [
         [0, "Fetching transcript…"],
-        [900, "Reading captions…"],
-        [1800, "Asking Gemini for clip ideas…"],
+        [850, "Reading captions…"],
+        [1750, "Asking Gemini for clip ideas…"],
       ];
       steps.forEach(function (s) { timers.push(setTimeout(function () { showStatus(s[1]); }, s[0])); });
+
+      // Success beat before the reveal, so the last thing on screen isn't a
+      // spinner mid-thought.
+      timers.push(setTimeout(function () {
+        showDone("✓ Found " + SAMPLE.length + " moments");
+      }, 2700));
 
       timers.push(setTimeout(function () {
         hideStatus();
@@ -756,7 +754,7 @@
         if (hint) {
           hint.innerHTML = "Preview — sample suggestions. The app runs this on <b>your</b> video and cuts the real .mp4 locally.";
         }
-      }, 2900));
+      }, 3350));
     });
   })();
   </script>
