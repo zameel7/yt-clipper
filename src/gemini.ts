@@ -11,11 +11,43 @@ export interface Clip {
   reason: string;
 }
 
-const MODEL = "gemini-2.5-flash";
-const ENDPOINT = (key: string) =>
-  `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${encodeURIComponent(
+// Tried in order. Newly created API keys / projects do not always have every
+// pinned model ID enabled — Gemini 3 Flash replaced 2.5 Flash as the default for
+// new projects — so walk from newest to oldest and keep the rolling alias as a
+// catch-all. Every entry is free-of-charge tier and supports JSON schema output.
+// https://ai.google.dev/gemini-api/docs/pricing
+const MODELS = [
+  "gemini-3.6-flash",
+  "gemini-3.5-flash",
+  "gemini-flash-latest",
+  "gemini-3-flash-preview",
+  "gemini-3.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash",
+];
+
+// Once a model works for this key, stick with it instead of re-walking the
+// chain (and re-paying the failed round trips) on every generate.
+let workingModel: string | null = null;
+
+const ENDPOINT = (model: string, key: string) =>
+  `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(
     key
   )}`;
+
+// A model the key cannot use at all — worth retrying with the next candidate.
+// Auth/quota/bad-request failures are not, they will fail identically.
+function isModelUnavailable(status: number, message: string): boolean {
+  if (status === 404) return true;
+  const m = message.toLowerCase();
+  return (
+    (status === 400 || status === 403) &&
+    (m.includes("not found") ||
+      m.includes("not supported") ||
+      m.includes("is not available") ||
+      m.includes("does not have access"))
+  );
+}
 
 function buildTranscript(segments: Segment[]): string {
   // One line per segment: "[start-end] text" (seconds, 1 decimal).
@@ -72,21 +104,44 @@ ${transcript}`;
     },
   };
 
-  const res = await fetch(ENDPOINT(apiKey), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let res: Response | undefined;
+  let lastError: { status: number; msg: string } | undefined;
 
-  if (!res.ok) {
-    const errText = await res.text();
+  const candidates = workingModel
+    ? [workingModel, ...MODELS.filter((m) => m !== workingModel)]
+    : MODELS;
+
+  for (const model of candidates) {
+    const attempt = await fetch(ENDPOINT(model, apiKey), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    if (attempt.ok) {
+      res = attempt;
+      workingModel = model;
+      break;
+    }
+
+    const errText = await attempt.text();
     let msg = errText;
     try {
       msg = JSON.parse(errText)?.error?.message ?? errText;
     } catch {
       /* keep raw text */
     }
-    throw new Error(`Gemini API error (${res.status}): ${msg}`);
+    lastError = { status: attempt.status, msg };
+
+    if (!isModelUnavailable(attempt.status, msg)) break;
+  }
+
+  if (!res) {
+    const { status, msg } = lastError ?? { status: 0, msg: "unknown error" };
+    const suffix = isModelUnavailable(status, msg)
+      ? ` (tried: ${MODELS.join(", ")} — none are available to this API key)`
+      : "";
+    throw new Error(`Gemini API error (${status}): ${msg}${suffix}`);
   }
 
   const data = await res.json();
